@@ -199,9 +199,11 @@ class RoomTeacherModel{
      */
     public function getTeacheIdListFilter($crid,$page=1,$pagesize=100,$filterUids='',$getall=0) {
         if ($filterUids) {
-            $sql = 'select tid as uid from ebh_roomteachers where crid='.$crid .' and tid not in('.$filterUids.') ';
+            $sql = 'select rt.tid as uid from ebh_roomteachers rt join ebh_users u on(rt.tid=u.uid)
+            join ebh_teachers t on(t.teacherid=u.uid) where rt.crid='.$crid .' and rt.tid not in('.$filterUids.') ';
         } else {
-            $sql = 'select tid as uid from ebh_roomteachers where crid='.$crid;
+            $sql = 'select rt.tid as uid from ebh_roomteachers rt join ebh_users u on(rt.tid=u.uid)
+            join ebh_teachers t on(t.teacherid=u.uid) where rt.crid='.$crid;
         }
         if (!$getall) {//不是导出要分页
             $start = ($page - 1) * $pagesize;
@@ -219,9 +221,11 @@ class RoomTeacherModel{
      */
     public function getTeacheIdListFilterCount($crid,$filterUids='') {
         if ($filterUids) {
-            $sql = 'select count(1) as c from ebh_roomteachers where crid='.$crid .' and tid not in('.$filterUids.') ';
+            $sql = 'select count(1) as c from ebh_roomteachers rt join ebh_users u on(rt.tid=u.uid)
+            join ebh_teachers t on(t.teacherid=u.uid) where rt.crid='.$crid .' and rt.tid not in('.$filterUids.') ';
         } else {
-            $sql = 'select count(1) as c from ebh_roomteachers where crid='.$crid;
+            $sql = 'select count(1) as c from ebh_roomteachers rt join ebh_users u on(rt.tid=u.uid)
+            join ebh_teachers t on(t.teacherid=u.uid) where rt.crid='.$crid;
         }
         $sql .= ' limit 1';
         $res = Ebh()->db->query($sql)->row_array();

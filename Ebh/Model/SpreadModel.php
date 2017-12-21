@@ -12,7 +12,7 @@ class SpreadModel{
      * @param $folderid
      */
     public function detail($itemid,$uid){
-        $sql = 'select p.itemid,p.pid,p.iname,p.isummary,p.crid,p.folderid,p.iprice,p.imonth,p.iday,p.cannotpay from ebh_pay_items p where status=0 and itemid='.$itemid;
+        $sql = 'select p.itemid,p.pid,p.iname,p.isummary,p.crid,p.folderid,p.iprice,p.imonth,p.iday,p.cannotpay,p.limitnum,p.islimit from ebh_pay_items p where status=0 and itemid='.$itemid;
         $payItem = Ebh()->db->query($sql)->row_array();
         if(!$payItem){
             return false;

@@ -141,9 +141,19 @@ class BundleController extends Controller {
                     'name' => 'displayorder',
                     'type' => 'int'
                 ),
-                'cannotpay' => array(
+				'cannotpay' => array(
                     'name' => 'cannotpay',
                     'type' => 'boolean'
+				),
+				'limitnum' => array(
+                    'name' => 'limitnum',
+                    'type' => 'int',
+					'default'=>0
+                ),
+				'islimit' => array(
+                    'name' => 'islimit',
+                    'type' => 'int',
+					'default'=>0
                 )
             ),
             //删除课程包
@@ -399,6 +409,14 @@ class BundleController extends Controller {
             'itemids' => $itemids,
             'dateline' => SYSTIME
         );
+		//限制人数范围1-9999
+		$params['limitnum'] = $this->limitnum;
+		$params['islimit'] = $this->islimit;
+		if($params['limitnum'] > 9999){
+			$params['limitnum'] = 9999;
+		} elseif($params['limitnum'] < 1 && $params['islimit'] == 1){
+			$params['limitnum'] = 1;
+		}
         if ($this->cover !== null) {
             $params['cover'] = $this->cover;
         }

@@ -253,6 +253,12 @@ class PayitemModel{
         if (isset($param['view_mode'])) {
             $spiarr['view_mode'] = $param['view_mode'];
         }
+		if(isset($param['limitnum'])){
+			$spiarr['limitnum'] = $param['limitnum'];
+		}
+		if(isset($param['islimit'])){
+			$spiarr['islimit'] = $param['islimit'];
+		}
 		return Ebh()->db->insert('ebh_pay_items',$spiarr);
 	}
 	
@@ -300,6 +306,12 @@ class PayitemModel{
         if (isset($param['view_mode'])) {
             $spiarr['view_mode'] = $param['view_mode'];
         }
+		if(isset($param['limitnum'])){
+			$spiarr['limitnum'] = $param['limitnum'];
+		}
+		if(isset($param['islimit'])){
+			$spiarr['islimit'] = $param['islimit'];
+		}
 		return Ebh()->db->update('ebh_pay_items',$spiarr,'itemid='.$param['itemid']);
 	}
 	public function deleteitem($itemid){
@@ -407,7 +419,7 @@ class PayitemModel{
 	*根据itemid获取服务项简单信息
 	*/
 	public function geSimpletItemByItemid($itemid) {
-		$sql = "select i.itemid,i.cannotpay ,i.ptype,i.folderid,i.iprice,i.sid from ebh_pay_items i where i.itemid=$itemid";
+		$sql = "select i.iname,i.itemid,i.cannotpay ,i.ptype,i.folderid,i.iprice,i.sid,i.limitnum,i.islimit from ebh_pay_items i where i.itemid=$itemid";
 		return Ebh()->db->query($sql)->row_array();
 	}
 	/**
@@ -606,7 +618,8 @@ class PayitemModel{
 	    $crid = intval($crid);
 	    $fields = array(
 	        '`a`.`itemid`', '`a`.`iname`', '`a`.`iprice`', '`a`.`pid`', '`a`.`sid`',
-            '`a`.`imonth`', '`a`.`iday`', '`a`.`isummary`', '`a`.`view_mode`', '`a`.`comfee`', '`a`.`roomfee`'
+            '`a`.`imonth`', '`a`.`iday`', '`a`.`isummary`', '`a`.`view_mode`', '`a`.`comfee`', '`a`.`roomfee`',
+			'`a`.`islimit`', '`a`.`limitnum`'
         );
 	    $wheres = array(
 	        '`a`.`crid`='.$crid,

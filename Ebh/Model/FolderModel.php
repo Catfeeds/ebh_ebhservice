@@ -1427,7 +1427,7 @@ class FolderModel{
         $crid = intval($crid);
         $fields = array(
             '`a`.`folderid`', '`a`.`itemid`', '`a`.`iprice`', '`a`.`imonth`', '`a`.`iname`', '`a`.`iday`',
-            '`a`.`pid`', '`a`.`sid`', '`b`.`foldername`', '`b`.`img`', '`b`.`summary`', '`b`.`folderpath`',
+            '`a`.`pid`', '`a`.`sid`','`a`.`limitnum`','`a`.`islimit`', '`b`.`foldername`', '`b`.`img`', '`b`.`summary`', '`b`.`folderpath`',
             '`b`.`coursewarenum`', '`b`.`fprice`', '`b`.`viewnum`', '`b`.`chapterid`' , '`b`.`uid`',
             'IFNULL(`e`.`grank`,0) AS `grank`', 'IFNULL(`e`.`prank`,0) AS `prank`' , 'IFNULL(`e`.`srank`,0) AS `srank`'
         );
@@ -1483,7 +1483,7 @@ class FolderModel{
         } else {
             $sql .= " ORDER BY `grank` ASC ,`folderid` DESC LIMIT $offset,$pagesize";
         }
-        $ret = Ebh()->db->query($sql)->list_array();log_message($sql);
+        $ret = Ebh()->db->query($sql)->list_array();
         if (!empty($ret)) {
             $chapterids = array_column($ret, 'chapterid');
             $chapterids = array_unique($chapterids);

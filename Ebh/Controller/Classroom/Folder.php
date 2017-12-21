@@ -453,11 +453,11 @@ class FolderController extends Controller{
                 $myclassidarr = array_column($myclass,'classid');
 
                 $myclassid = implode($myclassidarr,',');
-                $classfolders = $classCourseModel->getfolderidsbyclassid($myclassid);
+                $classfolders = $classCourseModel->getFolderidsByClassid($myclassid);
             }else{
                 $myclass = $classModel->getClassByUid($this->crid,$this->uid);
                 $myclassid = empty($myclass['classid']) ? 0 : $myclass['classid'];
-                $classfolders = $classCourseModel->getfolderidsbyclassid($myclassid);
+                $classfolders = $classCourseModel->getFolderidsByClassid($myclassid);
             }
 
             if(!empty($classfolders)){//获取课程基础信息

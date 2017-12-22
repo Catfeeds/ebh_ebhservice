@@ -20,6 +20,8 @@ class LogController extends Controller{
     private $maxlogidKey = 'maxlogid';  //存放当前最大的logid hash key
     private $courseHashName = 'course'; //用到的课件缓存，都放到此hash中
     private $newplaycourseHashName = 'newplaycourse'; //存在用户最新播放过的课件编号
+    private $studyLengthHashName   = 'studyLength';  //课程学习时长
+    private $longLengthHashName    = 'longLength';//课件播放最长的时间
     public function init(){
         parent::init();
     }
@@ -112,6 +114,8 @@ class LogController extends Controller{
                 $logForm['crid'] = $logFormCache['crid'];
                 $logForm['folderid'] = $logFormCache['folderid'];
                 $logForm['lastltime'] = $logFormCache['ltime']; //用来记录上一次的学习持续时间，用于对totalltime做增量
+                $logForm['maxLength'] = isset($logFormCache['maxLength']) ? $logFormCache['maxLength'] : 0;//取缓存播放最长的一次时间
+
             }
         }
         $isqueue = FALSE;
@@ -133,6 +137,7 @@ class LogController extends Controller{
             if(empty($logForm['folderid']))
                 $logForm['folderid'] = $course['folderid'];
             $isqueue = TRUE;
+
         }
         $logForm['ctime'] = $ctime;
         if ($logForm['ltime'] > 2 * $logForm['ctime'])  //持续时间太长，则进行控制
@@ -144,6 +149,25 @@ class LogController extends Controller{
             $ctime = 1;
         if ($ltime / $ctime > 0.9 ) {   //90%就当播放完成
             $logForm['finished'] = 1;
+        }
+        //无最长播放时间记录查询数据库
+        if(!isset($logForm['maxLength']) || $logForm['maxLength'] == 0){
+            $playlogModel = new PlayLogModel();
+            $maxLength = $playlogModel->getStudyLength($logForm['cwid'],$logForm['crid'],$logForm['uid']); //获取本课件播放时长最大的记录,获取失败为没有记录
+
+        }else{
+            //已缓存最长时间
+            $maxLength = $logForm['maxLength'];
+        }
+        //处理时间差
+        if($maxLength < $ltime){
+            //本次播放时长为最长时间
+            $logForm['difference'] = $ltime-$maxLength;
+            $logForm['maxLength']  = $ltime;
+        }else{
+            //本次播放时长非最长时间
+            $logForm['maxLength']  = $maxLength;
+            $logForm['difference'] = 0;
         }
         $redis->hSet($this->hashName,$logid,$logForm);
         if ($isqueue)  { //将一次播放的logid相关信息入队列
@@ -263,6 +287,7 @@ class LogController extends Controller{
                     $ltime = 0;
                 //同一次播放，则取每次ltime的差值
                 $totalLogForm['totalltime'] += $ltime;
+                $currTime                   =  $ltime;
             }
             //更新最大的一次ltime时间，此记录用于表示每次的最长学习时间
             $totalLogForm['ltime'] = $logForm['ltime'] > $totalLogForm['ltime'] ? $logForm['ltime'] : $totalLogForm['ltime'];   
@@ -279,6 +304,15 @@ class LogController extends Controller{
                 $totalLogForm['playcount'] ++;    //每次学习次数累加
         }
         $redis->hSet($this->totalHashName,$logForm['cwid'].'_'.$logForm['uid'],$totalLogForm);
+        //组装课程列表,课程学习时长的缓存数据 //存放在用网校id和用户id中间下划线组合key的缓存中
+        $params                = array();
+        $params['crid']        = $logForm['crid'];//网校id
+        $params['uid']         = $logForm['uid'];//当前用户id
+        $params['folderid']    = $logForm['folderid'];//课程id
+        $params['cwid']        = $logForm['cwid'];//课件id
+        $params['ctime']       = $logForm['ctime'];//课件时长
+        $params['difference'] = $logForm['difference'];//本次播放与原纪录的时间差，叠加到课程学习时长中
+        $this->_synchronousCache($params) ; //同步学习时长
     }
     /**
      * 根据课件编号获取课件基本信息，主要获取跟播放学习日志相关的字段
@@ -306,5 +340,38 @@ class LogController extends Controller{
             $redis->hSet($this->courseHashName,$cwidHashKey,$course);
         }
         return $course;
+    }
+
+    /**
+     * @describe:同步到课程缓存
+     * @User:tzq
+     * @Date:2017/12/12
+     * @param int $crid 当前网校id
+     * @param int $uid  当前用户id
+     * @param int $cwid 课件id
+     * @param int $ctime  课件时长
+     * @param int $difference 叠加时间，在非首次播放的时候计算
+     * @return void
+     */
+    private function _synchronousCache($params){
+        log_message(json_encode($params));
+        $redis = Ebh()->cache;  //redis对象
+        //取redis 里面的课程信息
+        $key       = $params['crid'] . '_' . $params['uid'];//用网校id和用户id中间下划线组合key
+        $folderid  = $params['folderid'];//课程id
+        $cwid      = $params['cwid'];//当前播放课件id
+        $difference = $params['ctime'] < $params['difference'] ? $params['ctime'] : $params['difference'] ; //限制学习时长超过课件时长
+        $studyList = $redis->hGet($this->studyLengthHashName, $key);//从缓存中取课程学习时长
+        if (empty($studyList)) {
+            //无缓存执行操做
+            $studyList                     = array();
+            $studyList[$folderid]['ltime'] = $difference;
+            $studyList[$folderid]['cwids'] = array($cwid);
+        } else {
+            $studyList[$folderid]['ltime'] = isset($studyList[$folderid]['ltime']) ? $studyList[$folderid]['ltime'] : 0;
+            $studyList[$folderid]['ltime'] += $difference ;//叠加播放时长
+        }
+        log_message(json_encode($studyList));
+        $redis->hSet($this->studyLengthHashName, $key, $studyList);
     }
 }

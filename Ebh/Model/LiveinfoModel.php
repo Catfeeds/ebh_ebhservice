@@ -26,7 +26,7 @@ class LiveinfoModel{
      * @return mixed
      */
     public function getLiveInfoByCwid($cwid){
-        $sql = "select cwid,liveid,type,httppullurl,hlspullurl,rtmppullurl,pushurl from ebh_course_liveinfos where cwid=".$cwid;
+        $sql = "select cwid,liveid,type,httppullurl,hlspullurl,rtmppullurl,pushurl,review from ebh_course_liveinfos where cwid=".$cwid;
         $row = Ebh()->db->query($sql)->row_array();
         return $row;
     }

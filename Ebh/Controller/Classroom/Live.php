@@ -90,6 +90,7 @@ class LiveController extends Controller{
         $liveinfo['systime'] = date('Y/m/d H:i:s',SYSTIME);	//系统时间戳
         $liveinfo['im'] = $imurl;	//聊天室地址
         $liveinfo['key'] = $key;
+        $liveinfo['review'] = $live['review'];
         return returnData(1,'',$liveinfo);
     }
     /**
@@ -147,6 +148,7 @@ class LiveController extends Controller{
         $liveinfo['systime'] = date('Y/m/d H:i:s',SYSTIME);	//系统时间戳
         $liveinfo['im'] = $imurl;	//聊天室地址
         $liveinfo['key'] = $key;
+        $liveinfo['review'] = $live['review'];
         return returnData(1,'',$liveinfo);
     }
 

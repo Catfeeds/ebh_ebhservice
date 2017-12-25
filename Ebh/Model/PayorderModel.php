@@ -732,5 +732,70 @@ class PayorderModel{
 		return $this->db->query($sql)->list_array('d');
 	}
 	
+	/*
+	课程开通人员列表
+	*/
+	public function getOpenList($param){
+		if(empty($param['crid']) || (empty($param['itemid']) && empty($param['bid']))){
+			return array();
+		}
+		$idtype = empty($param['itemid'])?'bid':'itemid';
+		$sql = 'select od.uid,o.dateline,c.classname  
+				from ebh_pay_orders o 
+				join ebh_pay_orderdetails od on o.orderid=od.orderid
+				join ebh_classstudents cs on od.uid=cs.uid 
+				join ebh_classes c on c.classid=cs.classid';
+		$wherearr[] = 'od.'.$idtype.'='.$param[$idtype];
+		$wherearr[] = 'od.crid='.$param['crid'];
+		$wherearr[] = 'o.crid='.$param['crid'];
+		$wherearr[] = 'c.crid='.$param['crid'];
+		$wherearr[] = 'o.refunded=0';
+		$wherearr[] = 'o.status=1';
+		if($idtype == 'itemid'){
+			$wherearr[] = 'od.bid=0';
+		}
+		$sql.= ' where '.implode(' AND ',$wherearr);
+		$sql.= ' group by od.uid order by od.orderid desc';
+		if(!empty($param['limit'])){
+			$sql.= ' limit '.$param['limit'];
+		}
+		return $this->db->query($sql)->list_array();
+	}
 	
+	/*
+	课程开通人员数量
+	*/
+	public function getOpenCount($param){
+		if(empty($param['crid']) || (empty($param['itemid']) && empty($param['bid']))){
+			return array('opencount'=>0,'selfcount'=>0);
+		}
+		$selfcountstr = '';
+		if(!empty($param['uid'])){//查询当前用户是否开通过
+			$selfcountstr = ',count( case when od.uid='.$param['uid'].' then 1 end) selfcount';
+		}
+		//bid课程包，iteimid课程
+		$idtype = empty($param['itemid'])?'bid':'itemid';
+		$sql = 'select '.$idtype.', count(distinct(od.uid)) opencount '.$selfcountstr.' 
+				from ebh_pay_orders o 
+				join ebh_pay_orderdetails od on o.orderid=od.orderid
+				join ebh_classstudents cs on od.uid=cs.uid 
+				join ebh_classes c on c.classid=cs.classid';
+		$wherearr[] = 'od.'.$idtype.' in ('.$param[$idtype].')';
+		$wherearr[] = 'od.crid='.$param['crid'];
+		$wherearr[] = 'o.crid='.$param['crid'];
+		$wherearr[] = 'c.crid='.$param['crid'];
+		$wherearr[] = 'o.refunded=0';
+		$wherearr[] = 'o.status=1';
+		if($idtype == 'itemid'){
+			$wherearr[] = 'od.bid=0';
+		}
+		$sql.= ' where '.implode(' AND ',$wherearr);
+		if(empty($param['islist'])){//单个课程/课程包
+			$count = $this->db->query($sql)->row_array();
+		} else {//多个课程/课程包
+			$sql.= ' group by '.$idtype;
+			$count = $this->db->query($sql)->list_array($idtype);
+		}
+		return $count;
+	}
 }

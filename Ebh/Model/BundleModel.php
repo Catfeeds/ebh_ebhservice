@@ -39,7 +39,7 @@ class BundleModel{
                 $top = max(1, $top);
             }
         }
-        $sql = 'SELECT `a`.`bid`,`a`.`name`,`a`.`cover`,`a`.`speaker`,`a`.`remark`,`a`.`bprice`,`a`.`pid`,`a`.`sid`,`a`.`display`,`a`.`displayorder`,`a`.`cannotpay`,`b`.`pname`,`b`.`displayorder` AS `pdisplayorder`,IFNULL(`c`.`sname`,\'其他课程\') AS `sname` 
+        $sql = 'SELECT `a`.`bid`,`a`.`name`,`a`.`cover`,`a`.`speaker`,`a`.`remark`,`a`.`bprice`,`a`.`pid`,`a`.`sid`,`a`.`display`,`a`.`displayorder`,`a`.`cannotpay`,`a`.`limitnum`,`a`.`islimit`,`b`.`pname`,`b`.`displayorder` AS `pdisplayorder`,IFNULL(`c`.`sname`,\'其他课程\') AS `sname` 
                 FROM `ebh_bundles` `a` JOIN `ebh_pay_packages` `b` ON `b`.`pid`=`a`.`pid`
                 LEFT JOIN `ebh_pay_sorts` `c` ON `c`.`sid`=`a`.`sid`';
         if (!empty($filterParams['display'])) {
@@ -168,6 +168,12 @@ class BundleModel{
         }
         if (isset($params['displayorder'])) {
             $edit_params['displayorder'] = $params['displayorder'];
+        }
+		if (isset($params['limitnum'])) {
+            $edit_params['limitnum'] = $params['limitnum'];
+        }
+		if (isset($params['islimit'])) {
+            $edit_params['islimit'] = $params['islimit'];
         }
         if (!empty($params['name']) || !empty($params['pid']) || isset($params['sid'])) {
             //检查重复包名
@@ -338,12 +344,26 @@ class BundleModel{
             '`b`.`status`=1',
             'IFNULL(`c`.`ishide`,0)=0'
         );
-        $sql = 'SELECT `a`.`crid`,`a`.`bid`,`a`.`name`,`a`.`remark`,`a`.`cover`,`a`.`pid`,`a`.`sid`,`a`.`speaker`,`a`.`bprice`,`a`.`detail`,`a`.`cannotpay`,`b`.`pname`,IFNULL(`c`.`sname`,\'其他课程\') AS `sname` 
+        $sql = 'SELECT `a`.`crid`,`a`.`bid`,`a`.`name`,`a`.`remark`,`a`.`cover`,`a`.`pid`,`a`.`sid`,`a`.`speaker`,`a`.`bprice`,`a`.`detail`,`a`.`cannotpay`,`b`.`pname`,IFNULL(`c`.`sname`,\'其他课程\') AS `sname` ,`a`.`limitnum`,`a`.`islimit`
                 FROM `ebh_bundles` `a` JOIN `ebh_pay_packages` `b` ON `b`.`pid`=`a`.`pid`
                 LEFT JOIN `ebh_pay_sorts` `c` ON `c`.`sid`=`a`.`sid` WHERE '.implode(' AND ', $wheres);
         return Ebh()->db->query($sql)->row_array();
     }
-
+	
+	
+	/**
+     * 课程包简单查询
+     * @param int $bid 课程包ID
+     * @return mixed
+     */
+	public function getSimpleByBid($bid){
+		if(empty($bid)){
+			return FALSE;
+		}
+		$sql = 'select bid,name,limitnum,islimit from ebh_bundles where bid='.$bid;
+		return  Ebh()->db->query($sql)->row_array();
+	}
+	
     /**
      * 课程包教师统计信息
      * @param array $tids 教师ID集

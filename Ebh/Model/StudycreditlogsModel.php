@@ -68,6 +68,9 @@ class StudycreditlogsModel{
         }else{
             $whereArr[] = 'scl.del = 0';
         }
+		if(!empty($param['exceptlogid'])){//不获取特定logid
+			$whereArr[] = 'scl.logid<>'.$param['exceptlogid'];
+		}
         if(!empty($whereArr)){
             $sql.=' WHERE '.implode(' AND ', $whereArr);
         }
@@ -124,6 +127,9 @@ class StudycreditlogsModel{
         }
 
         $afrows = Ebh()->db->insert('ebh_studycreditlogs',$setarr);
+		//清除学生学分缓存
+		$uslib = new UserStudyInfo();
+		$uslib->clearCache($setarr['crid'],$setarr['uid']);
         return $afrows;
     }
 
@@ -145,6 +151,9 @@ class StudycreditlogsModel{
             $articleid = intval($param['articleid']);
             $result = $this->db->update('ebh_studycreditlogs',array('del'=>1),array('uid'=>$uid,'type'=>2,'del'=>0,'articleid'=>$articleid));
         }
+		//清除网校学生学分缓存
+		$uslib = new UserStudyInfo();
+		$uslib->clearCache($param['crid']);
         return $result;
     }
 
@@ -225,7 +234,7 @@ class StudycreditlogsModel{
         $str = '';          //转成字符串的待导入学分表数据
         $insertsql = '';    //导入学分表的sql语句
         $getscorenum = 0;   //得分的评论数量总计
-
+		$uslib = new UserStudyInfo();
         $crid = !empty($param['crid']) ? intval($param['crid']) : 0;
         $uid = !empty($param['uid']) ? intval($param['uid']) : 0;
         if(empty($crid) || empty($uid)){
@@ -289,6 +298,8 @@ class StudycreditlogsModel{
                                     $insertsql = 'INSERT INTO ebh_studycreditlogs (`uid`,`crid`,`cwid`,`reviewid`,`dateline`,`score`,`type`,`fromip`) VALUES ' . $str;
                                     $result = $this->db->query($insertsql);
                                     if ($result === false) {
+										//清除网校学生学分缓存
+										$uslib->clearCache($crid);
                                         return false;
                                     }
                                 }
@@ -310,6 +321,8 @@ class StudycreditlogsModel{
         }else{
             log_message($getscorenum.'条评论学分同步成功!');
         }
+		//清除网校学生学分缓存
+		$uslib->clearCache($crid);
         return $result;
     }
 
@@ -328,7 +341,10 @@ class StudycreditlogsModel{
         $this->db->begin_trans();
         if(!empty($ret) && !empty($ret['single'])){
             $result = $this->db->update('ebh_studycreditlogs',array('score'=>$ret['single']),array('crid'=>$crid,'type'=>$type,'del'=>0));
-            if ($this->db->trans_status() === false) {
+            //清除学生学分缓存
+			$uslib = new UserStudyInfo();
+			$uslib->clearCache($crid,$uid);
+			if ($this->db->trans_status() === false) {
                 $this->db->rollback_trans();
                 $this->db->reset_con();
                 return false;

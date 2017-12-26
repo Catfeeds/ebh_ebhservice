@@ -262,6 +262,20 @@ class CoursewareModel
         return $this->db->query($sql)->row_array();
 	}
 
+    /**
+    *获取课件详情
+    */
+    public function getCourseByCwids($cwids=''){
+        if (empty($cwids)) {
+            return false;
+        }
+        $sql = 'select rc.delaytime,c.cwid,c.uid,c.catid,c.title,c.tag,c.logo,c.images,c.summary,c.message,c.cwname,c.cwsource,c.cwurl,cwsize,c.dateline,rc.crid,rc.folderid,rc.sid,rc.isfree,rc.cdisplayorder,c.status,c.islive,c.ism3u8,c.m3u8url,c.thumb,c.cwlength,c.cwsize,c.submitat,c.endat,c.ispreview,c.live_type '.
+                'from ebh_coursewares c ' .
+                'join ebh_roomcourses rc on (c.cwid = rc.cwid) '.
+                'where c.cwid in(' . $cwids . ')';
+        return $this->db->query($sql)->list_array();
+    }
+
 	/**
 	*删除课件
 	*/

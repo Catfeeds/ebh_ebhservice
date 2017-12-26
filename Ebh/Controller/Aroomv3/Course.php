@@ -69,9 +69,7 @@ class CourseController extends Controller{
                 'grade'  =>  array('name'=>'grade','default'=>0,'type'=>'int'),
                 'introtype' => array('name'=>'introtype', 'type'=>'int','default'=>0),
                 'attachment' => array('name'=>'attachment','type'=>'array'),
-                'slides' => array('name'=>'slides','type'=>'array', 'default' => array()),
-				'limitnum' => array('name'=>'limitnum', 'type'=>'int','default'=>0),
-				'islimit' => array('name'=>'islimit', 'type'=>'int','default'=>0),
+                'slides' => array('name'=>'slides','type'=>'array', 'default' => array())
             ),
             'editzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -140,9 +138,7 @@ class CourseController extends Controller{
                 'grade'  =>  array('name'=>'grade','default'=>0,'type'=>'int'),
                 'introtype' => array('name'=>'introtype', 'type'=>'int','default'=>0),
                 'attachment' => array('name'=>'attachment','type'=>'array'),
-                'slides' => array('name'=>'slides','type'=>'array', 'default' => array()),
-				'limitnum' => array('name'=>'limitnum', 'type'=>'int','default'=>0),
-				'islimit' => array('name'=>'islimit', 'type'=>'int','default'=>0),
+                'slides' => array('name'=>'slides','type'=>'array', 'default' => array())
             ),
             'addzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -267,6 +263,7 @@ class CourseController extends Controller{
             'studyDetailAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
                 'cwid'  =>  array('name'=>'cwid','require'=>TRUE,'type'=>'int'),
+                'folderid'  =>  array('name'=>'folderid','default'=>0,'type'=>'int'),//整个课程下的课件
                 'pagesize' =>	array('name'=>'pagesize','default'=>20,'type'=>'int'),
                 'page' =>	array('name'=>'page','default'=>1,'type'=>'int'),
             ),
@@ -1081,14 +1078,7 @@ class CourseController extends Controller{
         $itemarr['isummary'] = $this->summary;
         $itemarr['crid'] = $roominfo['crid'];
         $itemarr['folderid'] = $folderid;
-		$itemarr['limitnum'] = $this->limitnum;
-		$itemarr['islimit'] = $this->islimit;
-		//限制人数范围1-9999
-		if($itemarr['limitnum'] > 9999){
-			$itemarr['limitnum'] = 9999;
-		} elseif($itemarr['limitnum'] < 1 && $itemarr['islimit'] == 1){
-			$itemarr['limitnum'] = 1;
-		}
+
         $itemarr['iprice'] = empty($this->fprice)?0:$this->iprice;
         if(empty($iteminfo['roomfee']) && empty($iteminfo['comfee']) || intval($iteminfo['iprice']) == 0){//上一次没有分成信息,按照总后台设置的分成比例来
             $crmodel = new ClassRoomModel();
@@ -1228,9 +1218,37 @@ class CourseController extends Controller{
         $param['cwid'] = $this->cwid;
         $param['page'] = $this->page;
         $param['pagesize'] = $this->pagesize;
-        $studylist = $studylogmodel->getStudyDetailByCwid($param);
-        $studycount = $studylogmodel->getStudyCountByCwid($param);
+        $param['folderid'] = $this->folderid;
+        if ($param['folderid'] > 0) {
+            $studycount = 1;
+            //课程所有课件下的学习记录获取
+            $studylist = $studylogmodel->getStudyDetailByFolder($param);
+            if (!empty($studylist)) {
+                $cwids = '';
+                foreach ($studylist as $study) {
+                    $cwids .= $study['cwid'].',';
+                }
+                $cwmodel = new CoursewareModel();
+                //获取课件详情信息
+                $cw_info_list = $cwmodel->getCourseByCwids(substr($cwids, 0,-1));
+                if (!empty($cw_info_list)) {
+                    foreach ($cw_info_list as $cw) {
+                        $cw_map[$cw['cwid']] = $cw;
+                    }
+                    //赋值
+                    foreach ($studylist as &$value) {
+                        if (isset($cw_map[$value['cwid']])) {
+                            $value['title'] = $cw_map[$value['cwid']]['title'];
+                        }
+                    }
+                }
+            }
+        } else {
+            $studylist = $studylogmodel->getStudyDetailByCwid($param);
+            $studycount = $studylogmodel->getStudyCountByCwid($param);
+        }
         return array('studylist'=>$studylist,'studycount'=>$studycount);
+        
     }
     /*
     学习记录的学生信息
@@ -1592,7 +1610,7 @@ class CourseController extends Controller{
     public function getTeacherHeadAction(){
         $params['folderid'] = $this->folderid;
         if(empty($params)){
-            return ['code'=>1,'msg'=>'参数错误'];
+            return array('code'=>1,'msg'=>'参数错误');
         }
         $ret = $this->foldermodel->getTeacherHead($params);
         return $ret;
@@ -1746,6 +1764,5 @@ class CourseController extends Controller{
         return $ret;
         
     }
-	
-	
+
 }

@@ -2175,6 +2175,7 @@ class FolderModel{
         if(isset($param['sid']) && $param['sid'] >= 0){
             $wherearr [] = ' pi.sid = '.$param['sid'];
         }
+
         $wherearr [] = 'f.del=0';
         $sql .= ' WHERE '.implode(' AND ', $wherearr);
         if(!empty($param['order'])) {
@@ -3101,6 +3102,87 @@ GROUP BY uid';
 
         return $list;
 
+    }
+
+    /**
+     * 获取课程列表
+     * @param $param
+     * @return mixed
+     */
+    public function getFolderLists($param){
+        $sql = 'SELECT distinct f.folderid,f.foldername,f.img ,f.coursewarenum ,f.fprice,f.grade,f.district,f.summary,f.viewnum,f.playmode,f.uid,f.isschoolfree,f.speaker FROM ebh_folders f left join ebh_pay_items pi on pi.folderid = f.folderid join ebh_pay_packages p on p.pid=pi.pid join ebh_pay_sorts ps on ps.sid=pi.sid';
+        $wherearr = array();
+        if(! empty ( $param ['pstatus'] )){
+            $wherearr [] = ' p.status = ' . $param ['pstatus'];
+        }
+        if(! empty ( $param ['sishide'] )){
+            $wherearr [] = ' ps.ishide = ' . $param ['sishide'];
+        }
+        if(! empty ( $param ['folderid'] )){
+            $wherearr [] = 'f.folderid IN (' . $param ['folderid'] . ')';
+        }
+        if(! empty ( $param ['crid'] )){
+            $wherearr [] = ' f.crid = ' . $param ['crid'];
+        }
+        if(! empty ( $param ['uid'] )){
+            $wherearr [] = ' f.uid = ' . $param ['uid'];
+        }
+        if(! empty ( $param ['status'] )){
+            $wherearr [] = ' f.status = ' . $param ['status'];
+        }
+        if(! empty ( $param ['folderids'] )){	//folderid组合以逗号隔开，如3033,3034
+            $wherearr [] = ' f.folderid in (' . $param ['folderids'].')';
+        }
+        if(! empty ( $param ['folderlevel'] )){
+            $wherearr [] = ' f.folderlevel = ' . $param ['folderlevel'];
+        }
+        if(isset ( $param ['upid'] )){
+            $wherearr [] = ' f.upid <> ' . $param ['upid'];
+        }
+        if(! empty ( $param ['coursewarenum '] )){	//过滤课程下课件数为0的课程
+            $wherearr [] = ' f.coursewarenum  > 0 ';
+        }
+        if(isset($param['filternum'])){
+            $wherearr [] = ' f.coursewarenum > 0';
+        }
+        if(isset($param['nosubfolder'])){
+            $wherearr [] = ' f.folderlevel = 2';
+        }
+        if(!empty($param['needpower'])){
+            $wherearr [] = ' f.power = 0';
+        }
+        if(isset($param['isschoolfree'])){
+            $wherearr [] = ' f.isschoolfree='.$param['isschoolfree'];
+        }
+        if(!empty($param['q'])){
+            $wherearr [] = 'f.foldername like \'%'.Ebh()->db->escape_str($param['q']).'%\'';
+        }
+        if(isset($param['pid']) && $param['pid'] >= 0){
+            $wherearr [] = ' pi.pid = '.$param['pid'];
+        }
+        if(isset($param['sid']) && $param['sid'] >= 0){
+            $wherearr [] = ' pi.sid = '.$param['sid'];
+        }
+
+        $wherearr [] = 'f.del=0';
+        $sql .= ' WHERE '.implode(' AND ', $wherearr);
+        if(!empty($param['order'])) {
+            $sql .= ' ORDER BY '.$param['order'];
+        } else {
+            $sql .= ' ORDER BY f.displayorder';
+        }
+        if(!empty($param['limit'])) {
+            $sql .= ' limit '.$param['limit'];
+        } else {
+            if (empty($param['page']) || $param['page'] < 1)
+                $page = 1;
+            else
+                $page = $param['page'];
+            $pagesize = empty($param['pagesize']) ? 10 : $param['pagesize'];
+            $start = ($page - 1) * $pagesize;
+            $sql .= ' limit ' . $start . ',' . $pagesize;
+        }
+        return Ebh()->db->query($sql)->list_array();
     }
 
 }

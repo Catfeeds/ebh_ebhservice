@@ -160,7 +160,9 @@ class FolderController extends Controller{
         $parameters['pid'] = $this->pid;
         $parameters['sid'] = $this->sid;
         $parameters['nosubfolder'] = 1;
-        $list = $this->folderModel->getFolders($parameters);
+        $parameters['pstatus'] = 1;
+        $parameters['ishide'] = 0;
+        $list = $this->folderModel->getFolderLists($parameters);
 
 
         if(!empty($list)){

@@ -326,7 +326,7 @@
 				$start = ($page - 1) * $pagesize;
 				$sql .= ' limit ' . $start . ',' . $pagesize;
 			}
-			return Ebh()->db->query($sql)->list_array('uid');
+			return Ebh()->db->query($sql)->list_array();
 			
 		}
 		

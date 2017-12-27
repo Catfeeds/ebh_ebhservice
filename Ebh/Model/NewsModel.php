@@ -503,8 +503,9 @@ class NewsModel {
     public function getNewsLists($filterParams) {
         $params = array();
         $result = array();
-        if (isset($filterParams['navcode'])) {
-            $params[] = '`navcode`='.Ebh()->db->escape($filterParams['navcode']);
+        if (isset($filterParams['navcode']) && is_string($filterParams['navcode'])) {
+            $navcode = Ebh()->db->escape($filterParams['navcode']);
+            $params[] = '`navcode` in ('.implode('\',\'',explode(',',$navcode)).')';
         }
         if (isset($filterParams['begin'])) {
             $offset=intval($filterParams['begin']);
@@ -543,8 +544,9 @@ class NewsModel {
     public function getNewsListsCount($filterParams) {
         $params = array();
         $result = 0;
-        if (isset($filterParams['navcode'])) {
-            $params[] = '`navcode`='.Ebh()->db->escape($filterParams['navcode']);
+        if (isset($filterParams['navcode']) && is_string($filterParams['navcode'])) {
+            $navcode = Ebh()->db->escape($filterParams['navcode']);
+            $params[] = '`navcode` in ('.implode('\',\'',explode(',',$navcode)).')';
         }
         if (isset($filterParams['crid'])) {
             $params[] = '`crid`='.intval($filterParams['crid']);

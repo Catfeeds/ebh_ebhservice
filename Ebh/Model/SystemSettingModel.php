@@ -100,6 +100,12 @@ class SystemSettingModel
         if (isset($update_params['ebhbrowser'])) {
             $params['ebhbrowser'] = intval($update_params['ebhbrowser']);
         }
+        if (isset($update_params['isbanbuy'])) {
+            $params['isbanbuy'] = intval($update_params['isbanbuy']);
+        }
+        if (isset($update_params['isbanregister'])) {
+            $params['isbanregister'] = intval($update_params['isbanregister']);
+        }
         if (empty($update_params)) {
             return 0;
         }
@@ -168,6 +174,12 @@ class SystemSettingModel
         if (isset($update_params['ebhbrowser'])) {
             $params['ebhbrowser'] = intval($update_params['ebhbrowser']);
         }
+        if (isset($update_params['isbanbuy'])) {
+            $params['isbanbuy'] = intval($update_params['isbanbuy']);
+        }
+        if (isset($update_params['isbanregister'])) {
+            $params['isbanregister'] = intval($update_params['isbanregister']);
+        }
         $params['crid'] = intval($crid);
         return $this->db->insert('ebh_systemsettings', $params);
     }
@@ -179,7 +191,7 @@ class SystemSettingModel
      */
     public function getOtherSetting($crid) {
         $crid = (int) $crid;
-        $sql = "SELECT `refuse_stranger`,`mobile_register`,`review_interval`,`post_interval`,`limitnum`,`creditrule`,`showlink`,`showmodule`,`ebhbrowser` 
+        $sql = "SELECT `isbanbuy`,`isbanregister`,`refuse_stranger`,`mobile_register`,`review_interval`,`post_interval`,`limitnum`,`creditrule`,`showlink`,`showmodule`,`ebhbrowser` 
                 FROM `ebh_systemsettings` 
                 WHERE `crid`=$crid LIMIT 1";
         return $this->db->query($sql)->row_array();

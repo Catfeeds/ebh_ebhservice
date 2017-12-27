@@ -96,6 +96,46 @@ $logdescription = array(
 
     'choosedesign'=>array('message'=>'启用[clientType]版装扮: [title]',
         'opid'=>2,'type'=>'design','typestr'=>'启用装扮'),
+
+    //-------------通知消息
+    'addnotice'=> array('message'=>'发布标题为:[title] 的通知消息',
+        'opid'=>1,'type'=>'notice','typestr'=>'新建通知'),
+
+    'editnotice'=>array('message'=>'将通知: [oldtitle] 修改为: [title]',
+        'opid'=>2,'type'=>'notice','typestr'=>'编辑通知'),
+
+    'delnotice'=>array('message'=>'将通知: [title] 删除',
+        'opid'=>4,'type'=>'notice','typestr'=>'删除通知'),
+
+    //-------------资讯
+    'addnews'=> array('message'=>'发布标题为:[title] 的资讯',
+        'opid'=>1,'type'=>'news','typestr'=>'发布资讯'),
+
+    'editnews'=>array('message'=>'将资讯: [oldtitle] 修改为: [title]',
+        'opid'=>2,'type'=>'news','typestr'=>'编辑资讯'),
+
+    'delnews'=>array('message'=>'将资讯: [title] 删除',
+        'opid'=>4,'type'=>'news','typestr'=>'删除资讯'),
+
+    //-------------公告
+    'editmessage'=>array('message'=>'公告: [title]…… 已保存',
+        'opid'=>2,'type'=>'message','typestr'=>'编辑公告'),
+
+    //-------------问题
+    'shieldask'=>array('message'=>'屏蔽问题: [title]',
+        'opid'=>2,'type'=>'message','typestr'=>'屏蔽问题'),
+    'unshieldask'=>array('message'=>'取消屏蔽问题: [title]',
+        'opid'=>2,'type'=>'message','typestr'=>'取消屏蔽问题'),
+
+    //-------------评论
+    'shieldreview'=>array('message'=>'屏蔽账号:[username],姓名:[realname] 对于课程《[iname]》中课件《[title]》的评论',
+        'opid'=>2,'type'=>'message','typestr'=>'屏蔽评论'),
+    'unshieldreview'=>array('message'=>'取消屏蔽账号:[username],姓名:[realname] 对于课程《[iname]》中课件《[title]》的评论',
+        'opid'=>2,'type'=>'message','typestr'=>'取消屏蔽评论'),
+    'auditreview'=>array('message'=>'账号:[username],姓名:[realname] 在课程《[iname]》中课件《[title]》的评论审核通过',
+        'opid'=>2,'type'=>'message','typestr'=>'评论审核通过'),
+    'unauditreview'=>array('message'=>'账号:[username],姓名:[realname] 在课程《[iname]》中课件《[title]》的评论审核不通过',
+        'opid'=>2,'type'=>'message','typestr'=>'评论审核不通过'),
 );
 return $logdescription;
 ?>

@@ -315,6 +315,9 @@ class PlayLogModel {
 		$wherearr[] = 'uid='.$param['uid'];
 		$wherearr[] = 'crid='.$param['crid'];
 		$wherearr[] = 'totalflag=0';
+		if(!empty($param['exceptlogid'])){//不获取特定logid
+			$wherearr[] = 'logid<>'.$param['exceptlogid'];
+		}
 		$sql.= ' where '.implode(' AND ',$wherearr);
 		$row = $this->db->query($sql)->row_array();
 		return $row['ltime'];
@@ -409,6 +412,7 @@ class PlayLogModel {
 		if(empty($folderid) || empty($crid)){
 			return FALSE;
 		}
+		$uslib = new UserStudyInfo();
 		$this->db->delete('ebh_studycreditlogs',array('folderid'=>$folderid,'type'=>0));
 		$sql = 'select cwcredit,cwpercredit from ebh_folders where folderid='.$folderid;
 		$folder = $this->db->query($sql)->row_array();
@@ -420,6 +424,8 @@ class PlayLogModel {
 		$sql = 'select distinct(uid) from ebh_playlogs where totalflag=1 and finished=1 and folderid='.$folderid;
 		$uidlist = $this->db->query($sql)->list_array();
 		if(empty($uidlist)){
+			//清除网校学生学分缓存
+			$uslib->clearCache($crid);
 			return FALSE;
 		}
 		$uidcount = count($uidlist);
@@ -444,7 +450,8 @@ class PlayLogModel {
 				$uids = '';
 			}
 		}
-		
+		//清除网校学生学分缓存
+		$uslib->clearCache($crid);
 	}
 
     /**
@@ -520,5 +527,155 @@ class PlayLogModel {
     public function getStudentScoreList($uids, $crid) {
         $sql = 'SELECT SUM(`score`) AS `score`,`uid` FROM `ebh_studycreditlogs` WHERE `uid` IN('.implode(',', $uids).') AND `crid`='.$crid.' AND `del`=0 GROUP BY `uid`';
         return Ebh()->db->query($sql)->list_array('uid');
+    }
+
+    /**
+     * @describe:获取用户的课程的总学习时长
+     * @User:gl
+     * @Date:2017/12/19
+     * @param int $crid 网校id
+     * @param int $uid  当前用户id
+     * @param string $folderids 课程id多个用逗号隔开
+     * @return array   array('folderid1'=>array('ltime'=>4544),
+                             'folderid2'=>array('ltime'=>7845)
+                             )
+     */
+    public function getLengthByFolder($crid,$uid,$folderids){
+        
+        if (empty($crid) || empty($uid) || empty($folderids)) {
+            return FALSE;
+        }
+        $where = array();
+        $where[]  = '`co`.`cwlength`>0';//统计学习时长大于0的减少查询记录
+        $where[]  = '`ro`.`folderid` IN(' . $folderids . ')';//
+        $where[] = '`co`.`status` >= 0';//判断状态
+        $where[]  = '`ro`.`crid`=' . $crid;
+        $sql      = 'SELECT `ro`.`folderid`,`co`.`cwid`,`co`.`cwlength` FROM `ebh_roomcourses` `ro` ';
+        $sql      .= 'JOIN `ebh_coursewares` `co` ON `ro`.`cwid`=`co`.`cwid` ';
+        $sql      .= ' WHERE ' . implode(' AND ', $where);
+
+        $list = $this->db->query($sql)->list_array();//获取课件列表
+        //取出课件列表
+        $cwidsArr = array_column($list,'cwid');
+        if(!empty($cwidsArr)){
+            $cwids = implode(',',$cwidsArr);
+            $pwhere = array(); //学习日志表条件
+            $pwhere[] = '`pl`.`ltime` >0';//统计听课时间大于0秒的
+            $pwhere[] = '`pl`.`totalflag` = 1';//统计 总记录
+            $pwhere[] = '`pl`.`crid`=' . $crid;
+            $pwhere[] = '`pl`.`uid`=' . $uid;
+            $pwhere[] = '`pl`.`cwid` IN (' . $cwids . ')';
+            $sql = 'SELECT `cwid`,`folderid`, `ltime`, `ctime` FROM ebh_playlogs `pl` WHERE '.implode(' AND ',$pwhere);
+            $sql .= ' GROUP BY `pl`.`cwid` ORDER BY NULL';
+            $coursewareList = $this->db->query($sql)->list_array('cwid');
+        }
+        $folderList = array();
+        foreach ($list as $item) {
+            $folderid = $item['folderid'];
+            $cwid     = $item['cwid'];
+            if(!isset($folderList[$item['folderid']])){
+                $ltime = isset($coursewareList[$cwid]['ltime']) ? $coursewareList[$cwid]['ltime'] : 0 ;
+                $ctime = isset($coursewareList[$cwid]['ctime']) ? $coursewareList[$cwid]['ctime'] : 0 ;
+                if($ltime > $ctime)
+                    $ltime = $ctime;
+                $folderList[$folderid]['ltime']  = $ltime ;
+            }else{
+                $ltime = isset($coursewareList[$cwid]['ltime']) ? $coursewareList[$cwid]['ltime'] : 0 ;
+                $ctime = isset($coursewareList[$cwid]['ctime']) ? $coursewareList[$cwid]['ctime'] : 0 ;
+                if($ltime > $ctime)
+                    $ltime = $ctime;
+                $folderList[$folderid]['ltime']  += $ltime ;
+            }
+        }
+        return isset($folderList) ? $folderList : array();
+    }
+
+    /**
+     * @describe:获取普通课件的学习时长,获取失败为没有学习
+     * @User:gl
+     * @Date:2017/12/22
+     * @param int   $crid  网校id
+     * @param int   $uid   用户id
+     * @param string $cwids 课件id,多个逗号隔开
+     * @return array array('123'=>array('cwid'=>123,'folderid'=>4656,'ltime'=>4512),
+     *                     '124'=>array('cwid'=>124,'folderid'=>4656,'ltime'=>478)
+     *                   )
+     */
+    public function getCourseltime($crid,$uid,$cwids){
+        $crid = intval($crid);
+        $uid  = intval($uid);
+        if ($crid == 0 || $uid == 0) {
+            return 0;
+        }
+        $where   = array();
+        $where[] = '`crid`=' . $crid;
+        $where[] = '`uid`=' . $uid;
+        $where[] = '`cwid` IN(' . $cwids . ')';
+        $where[] = '`totalflag`=1';
+        $sql     = 'SELECT  `cwid`,`folderid`,`ltime`';
+        $sql     .= ' FROM ebh_playlogs  WHERE ' . implode(' AND ', $where);
+        $sql     .= ' GROUP BY  `cwid` ORDER BY NULL';
+        return $this->db->query($sql)->list_array('cwid');
+
+    }
+
+    /**
+     * @describe:取本课件用户学习持续时间最长的时间
+     * @User:tzq
+     * @Date:2017/12/21
+     * @param int  $cwid 课件id
+     * @param int   $crid 网校id
+     * @param int  $uid   用户id
+     * @return  int
+     */
+    public function getStudyLength($cwid,$crid,$uid){
+        $cwid = intval($cwid);
+        $crid = intval($crid);
+        $uid  = intval($uid);
+        if ($cwid == 0 || $crid == 0 || $uid == 0) {
+            return 0;
+        }
+        $where   = array();
+        $where[] = '`crid`=' . $crid;
+        $where[] = '`uid`=' . $uid;
+        $where[] = '`cwid`=' . $cwid;
+        $where[] = '`totalflag`=0';
+
+        $sql       = 'SELECT MAX(`ltime`) `ltime` ';
+        $sql       .= 'FROM ebh_playlogs  WHERE ' . implode(' AND ', $where);
+        $maxLength = $this->db->query($sql)->row_array();
+        return $maxLength['ltime'] > 0 ? $maxLength['ltime'] : 0;
+    }
+
+     /**
+     * @describe:获取国土的课件的累计时长,获取失败为没有学习
+     * @User:tzq
+     * @Date:2017/12/22
+     * @param int   $crid  网校id
+     * @param int   $uid   用户id
+     * @param string $cwids 课件id,多个逗号隔开
+     * @param bool   $isCount 是否统计
+     * @return mixed 获取失败int
+     */
+    public function getCourseTotalltime($crid,$uid,$cwids,$isCount=true){
+        $crid = intval($crid);
+        $uid  = intval($uid);
+        if ($crid == 0 || $uid == 0) {
+            return 0;
+        }
+        $where   = array();
+        $where[] = '`crid`=' . $crid;
+        $where[] = '`uid`=' . $uid;
+        $where[] = '`cwid` IN(' . $cwids . ')';
+        $where[] = '`totalflag`=0';
+        $field = ['`cwid`,`folderid`'];
+        if($isCount){
+            array_push($field,'SUM(`ltime`)  `totalltime`');
+        }
+        $sql     = 'SELECT  '.implode(',',$field);
+        $sql     .= ' FROM ebh_playlogs  WHERE ' . implode(' AND ', $where);
+        $sql     .= ($isCount?' GROUP BY  `cwid` ORDER BY NULL':'');
+        return $this->db->query($sql)->list_array('cwid');
+
     }
 }

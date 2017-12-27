@@ -361,11 +361,19 @@ class UserController extends Controller{
 
         $result['has_study'] = $total;
 
-
-        $scoresum = runAction('Classroom/Score/getUserSum',array('uid'=>$this->uid,'crid'=>$this->crid));
-        $result['scoresum'] = isset($scoresum['scores']) ? $scoresum['scores'] : '0';
-        $foldercredit = runAction('Member/User/folderCredit',array('uid'=>$this->uid,'crid'=>$this->crid));
-        $result['ltime'] = isset($foldercredit['ltime']) ? $foldercredit['ltime'] : 0;
+		
+		
+		//学分，学时，先获取缓存
+		
+		$uslib = new UserStudyInfo();
+		$scoresum = $uslib->getCache($this->crid,$this->uid);
+		if(empty($scoresum)){
+			$scoresum = runAction('Classroom/Score/getUserSum',array('uid'=>$this->uid,'crid'=>$this->crid));
+			$uslib->setCache($this->crid,$this->uid,array('scoresum'=>$scoresum['scoresum'],'ltime'=>$scoresum['ltime']));
+		}
+		$result['scoresum'] = isset($scoresum['scoresum']) ? $scoresum['scoresum'] : '0';
+		$result['ltime'] = isset($scoresum['ltime']) ? $scoresum['ltime'] : '0';
+		
 
 
         //获取用户模块信息

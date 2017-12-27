@@ -28,7 +28,9 @@ class ScoreController extends Controller{
             'getUserSumAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int'),
-                'type'  =>  array('name'=>'type','type'=>'int')
+                'type'  =>  array('name'=>'type','type'=>'int'),
+				'exceptlogid_p' => array('name'=>'exceptlogid_p','type'=>'int','default'=>0),
+				'exceptlogid_c' => array('name'=>'exceptlogid_c','type'=>'int','default'=>0),
             ),
             'addOneScoreAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
@@ -100,12 +102,21 @@ class ScoreController extends Controller{
         if(isset($this->type)){
             $param['type'] = $this->type;   //获取指定用户文章、课件或评论获得的总学分
         }
-        $scoresum = $this->scoreModel->getUserSum($param);
-        if(empty($scoresum)){
-            return array();
-        }else{
-            return $scoresum;
-        }
+		if(isset($this->exceptlogid_c)){//不查询的学分记录id
+			$param['exceptlogid'] = $this->exceptlogid_c;
+		}
+        $scoresum = $this->scoreModel->getUserSum($param);//学分
+		$scoresum['scoresum'] = empty($scoresum['scores'])?0:round($scoresum['scores'],1);
+		
+		$plmodel = new PlayLogModel();
+		$paramp = array('uid'=>$this->uid,'crid'=>$this->crid);
+		if(isset($this->exceptlogid_p)){//不查询的听课记录id
+			$paramp['exceptlogid'] = $this->exceptlogid_p;
+		}
+		$ltime = $plmodel->getTimeByCrid($paramp);//学时
+		$ltime = round(intval($ltime)/3600,1);
+		$scoresum['ltime'] = $ltime;
+        return $scoresum;
     }
 
     /**
@@ -208,7 +219,7 @@ class ScoreController extends Controller{
      *@return bool
      */
     public function deleteScoreAction(){
-        $param['crid'] = $this->crid;
+        $param['crid'] = $this->crid;//清除缓存用到
         $param['uid'] = $this->uid;
         $param['type'] = $this->type;
         if(!empty($this->logid)){

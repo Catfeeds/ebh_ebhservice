@@ -287,6 +287,48 @@
 			return Ebh()->db->query($sql)->list_array('uid');
 			
 		}
+
+		/*
+		课程的学习情况
+		*/
+		public function getStudyDetailByFolder($param){
+			//数据库测试语句，测试100000条数据导出，花费4秒
+			/*$sql = 'select * from ebh_roomusers where crid=10194';
+			$uidlist = Ebh()->db->query($sql)->list_array('uid');
+			$uidArr = array_keys($uidlist);
+
+			$testsql = 'INSERT INTO `testplaylogs` (`uid`, `cwid`, `ctime`, `ltime`, `startdate`, `lastdate`, `totalflag`, `finished`, `crid`, `folderid`, `curtime`, `ip`) VALUES';
+			for ($i=0; $i <150000 ; $i++) { 
+				$testsql .= '('.$uidArr[array_rand($uidArr,1)].', 125153, 29, 1, 1505874094, 1505874094, 0, 0, 10194, 29774, 0, \'192.168.0.62\'),';
+			}
+			$testsql = substr($testsql, 0,-1);
+			Ebh()->db->query($testsql);exit;*/
+			if(empty($param['folderid'])){
+				return FALSE;
+			}
+			$sql = 'select uid,cwid,ctime,sum(ltime) ltime,count(1) count,min(startdate) startdate,max(lastdate) lastdate
+					from ebh_playlogs';
+			if(!empty($param['crid'])){
+				$wherearr[] = 'crid='.$param['crid'];
+			}
+			$wherearr[] = 'folderid='.$param['folderid'];
+			$wherearr[] = 'totalflag=0';
+			$sql.= ' where '.implode(' AND ',$wherearr);
+			$sql.= ' group by uid,cwid';
+			if(!empty($param['limit'])) {
+				$sql .= ' limit '.$param['limit'];
+			} else {
+				if (empty($param['page']) || $param['page'] < 1)
+					$page = 1;
+				else
+					$page = $param['page'];
+				$pagesize = empty($param['pagesize']) ? 20 : $param['pagesize'];
+				$start = ($page - 1) * $pagesize;
+				$sql .= ' limit ' . $start . ',' . $pagesize;
+			}
+			return Ebh()->db->query($sql)->list_array('uid');
+			
+		}
 		
 		/*
 		课件的学习情况,学生数量

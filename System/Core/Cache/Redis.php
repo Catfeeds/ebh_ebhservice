@@ -91,6 +91,17 @@ class Cache_Redis implements Cache{
         }
         return $this->unformatValue($value);
     }
+	
+	/**
+     *    delete hash opeation
+     */
+    public function hDel($name,$key = null){
+        if($key){
+            return $this->redis->hdel($this->formatKey($name),$key);
+        }
+        return $this->redis->delete($this->formatKey($name));
+    }
+	
     /*******************************************************
     队列操作开始 start 通过list模拟队列queue操作
     ********************************************************/

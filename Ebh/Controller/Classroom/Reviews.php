@@ -35,6 +35,10 @@ class ReviewsController extends Controller{
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
                 'logid'  =>  array('name'=>'logid','require'=>true,'type'=>'int'),
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int'),
+            ),
+            'getDetailByLogidAction' =>  array(
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
+                'logid'  =>  array('name'=>'logid','require'=>true,'type'=>'int'),
             )
         );
     }
@@ -209,5 +213,14 @@ class ReviewsController extends Controller{
         $result['list'] = $list;
         return returnData(1,'',$result);
 
+    }
+
+    /**
+     * 根据logid获取评论和课程,课件详情
+     * @return array
+     */
+    public function getDetailByLogidAction(){
+        $reviewModel = new ReviewModel();
+        return $reviewModel->getDetailByLogid($this->logid,$this->crid);
     }
 }

@@ -396,8 +396,10 @@ class AskQuestionModel {
         if (isset($param['qid'])) {
             $whereArr[] = 'q.qid='.$param['qid'];
         }
-
-        $whereArr[] = 'q.shield=0';
+        //当进行屏蔽或取消屏蔽问题的操作时，不需要判断屏蔽状态是否为0
+        if(empty($param['changestatus']) || ($param['changestatus'] !=1)){
+            $whereArr[] = 'q.shield=0';
+        }
         $sql .= ' where '.implode(' and ',$whereArr);
         return Ebh()->db->query($sql)->row_array();
     }

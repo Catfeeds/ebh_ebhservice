@@ -69,7 +69,9 @@ class CourseController extends Controller{
                 'grade'  =>  array('name'=>'grade','default'=>0,'type'=>'int'),
                 'introtype' => array('name'=>'introtype', 'type'=>'int','default'=>0),
                 'attachment' => array('name'=>'attachment','type'=>'array'),
-                'slides' => array('name'=>'slides','type'=>'array', 'default' => array())
+                'slides' => array('name'=>'slides','type'=>'array', 'default' => array()),
+				'limitnum' => array('name'=>'limitnum', 'type'=>'int','default'=>0),
+				'islimit' => array('name'=>'islimit', 'type'=>'int','default'=>0),
             ),
             'editzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -138,7 +140,9 @@ class CourseController extends Controller{
                 'grade'  =>  array('name'=>'grade','default'=>0,'type'=>'int'),
                 'introtype' => array('name'=>'introtype', 'type'=>'int','default'=>0),
                 'attachment' => array('name'=>'attachment','type'=>'array'),
-                'slides' => array('name'=>'slides','type'=>'array', 'default' => array())
+                'slides' => array('name'=>'slides','type'=>'array', 'default' => array()),
+				'limitnum' => array('name'=>'limitnum', 'type'=>'int','default'=>0),
+				'islimit' => array('name'=>'islimit', 'type'=>'int','default'=>0),
             ),
             'addzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -1078,7 +1082,14 @@ class CourseController extends Controller{
         $itemarr['isummary'] = $this->summary;
         $itemarr['crid'] = $roominfo['crid'];
         $itemarr['folderid'] = $folderid;
-
+		$itemarr['limitnum'] = $this->limitnum;
+		$itemarr['islimit'] = $this->islimit;
+		//限制人数范围1-9999
+		if($itemarr['limitnum'] > 9999){
+			$itemarr['limitnum'] = 9999;
+		} elseif($itemarr['limitnum'] < 1 && $itemarr['islimit'] == 1){
+			$itemarr['limitnum'] = 1;
+		}
         $itemarr['iprice'] = empty($this->fprice)?0:$this->iprice;
         if(empty($iteminfo['roomfee']) && empty($iteminfo['comfee']) || intval($iteminfo['iprice']) == 0){//上一次没有分成信息,按照总后台设置的分成比例来
             $crmodel = new ClassRoomModel();

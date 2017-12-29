@@ -1114,23 +1114,6 @@ class StudyServiceController extends Controller {
         return $sort;
     }
 
-    public function courseAction() {
-
-    }
-
-    public function teacherListAction() {
-        if ($this->bid < 1 && $this->itemid < 1) {
-            return false;
-        }
-        return array(
-            array(
-                'username' => '',
-                'realname' => '姓名',
-                'profile' => '教师简介'
-            )
-        );
-    }
-
     /**
      * 全校课程服务列表
      * @param int $crid 网校ID

@@ -531,17 +531,17 @@ class PlayLogModel {
 
     /**
      * @describe:获取用户的课程的总学习时长
-     * @User:gl
+     * @User:tzq
      * @Date:2017/12/19
      * @param int $crid 网校id
      * @param int $uid  当前用户id
      * @param string $folderids 课程id多个用逗号隔开
      * @return array   array('folderid1'=>array('ltime'=>4544),
-                             'folderid2'=>array('ltime'=>7845)
-                             )
+    'folderid2'=>array('ltime'=>7845)
+    )
      */
     public function getLengthByFolder($crid,$uid,$folderids){
-        
+
         if (empty($crid) || empty($uid) || empty($folderids)) {
             return FALSE;
         }
@@ -614,7 +614,6 @@ class PlayLogModel {
         $where[] = '`totalflag`=1';
         $sql     = 'SELECT  `cwid`,`folderid`,`ltime`';
         $sql     .= ' FROM ebh_playlogs  WHERE ' . implode(' AND ', $where);
-        $sql     .= ' GROUP BY  `cwid` ORDER BY NULL';
         return $this->db->query($sql)->list_array('cwid');
 
     }
@@ -647,7 +646,7 @@ class PlayLogModel {
         return $maxLength['ltime'] > 0 ? $maxLength['ltime'] : 0;
     }
 
-     /**
+    /**
      * @describe:获取国土的课件的累计时长,获取失败为没有学习
      * @User:tzq
      * @Date:2017/12/22

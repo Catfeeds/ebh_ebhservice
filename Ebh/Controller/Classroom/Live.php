@@ -77,7 +77,7 @@ class LiveController extends Controller{
         $imurl = $liveconfig['imurl_app'];
         $key = $this->getKey($user);
         $imurl = str_replace('[key]',$key,$imurl);
-
+        $liveinfo['push_url'] = $live['pushurl'];
         $liveinfo['docplay'] = $docplay;	//教师文档播放地址
         $liveinfo['camplay'] = $camplay;	//教师摄像头播放地址
         $liveinfo['hlsdocplay'] = $hlsdocplay;	//教师文档播放地址

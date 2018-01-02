@@ -266,7 +266,7 @@ class AlbumsModel{
         }
 
         //当创建的是模板时记录模板did
-        if($setarr['issystem'] == 2){
+        if(!empty($setarr['issystem']) && ($setarr['issystem'] == 2)){
             if(empty($param['roomtype']) || !isset($setarr['clienttype'])){
                 return $return;
             }

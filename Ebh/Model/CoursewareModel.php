@@ -261,6 +261,19 @@ class CoursewareModel
                 'where c.cwid=' . $cwid;
         return $this->db->query($sql)->row_array();
 	}
+    /**
+     *获取课件详情
+     */
+    public function getCourseByCwids($cwids=''){
+        if (empty($cwids)) {
+            return false;
+        }
+        $sql = 'select rc.delaytime,c.cwid,c.uid,c.catid,c.title,c.tag,c.logo,c.images,c.summary,c.message,c.cwname,c.cwsource,c.cwurl,cwsize,c.dateline,rc.crid,rc.folderid,rc.sid,rc.isfree,rc.cdisplayorder,c.status,c.islive,c.ism3u8,c.m3u8url,c.thumb,c.cwlength,c.cwsize,c.submitat,c.endat,c.ispreview,c.live_type '.
+            'from ebh_coursewares c ' .
+            'join ebh_roomcourses rc on (c.cwid = rc.cwid) '.
+            'where c.cwid in(' . $cwids . ')';
+        return $this->db->query($sql)->list_array();
+    }
 
 	/**
 	*删除课件
@@ -948,4 +961,96 @@ class CoursewareModel
         return $this->db->query($sql)->row_array();
 
     }
+    /**
+     * @describe:课件->课件信息
+     * @User:tzq
+     * @Date:2017/12/12
+     * @param $param
+     * @param int $uid 用户id
+     * @param string $cwids 课件id多个逗号隔开
+     * @return
+     */
+    public function courseswareList($param)  {
+        if (empty($param['cwids']) || empty($param['uid']))
+            return FALSE;
+        $field = array(
+            '`logid`',
+            //  '`uid`',
+            '`cwid`',
+            '`ctime`',
+            '`curtime`',
+            '`finished`',
+            '`folderid`',
+            '`ltime`',
+            '`ip`',
+            '`startdate`',
+            '`lastdate`',
+            ' COUNT(`logid`) `playcount`',
+            ' SUM(`ltime`) `totalltime`',
+
+        );
+        //查询条件
+        $where   = array();
+        $where[] = '`crid` = ' . $param['crid'];
+        $where[] = '`uid` = ' . $param['uid'];
+        $where[] = '`cwid` IN ( ' . $param['cwids'] . ')';
+        $where[] = '`totalflag` = 0';
+        // $where[] = '`ltime` > 0';
+        $sql = 'SELECT ' . implode(',', $field) . ' FROM ebh_playlogs ';
+        $sql .= ' WHERE ' . implode(' AND ', $where);
+        $sql .= ' GROUP BY `cwid`';
+        //log_message($sql);
+        return $this->db->query($sql)->list_array();
+
+    }
+
+    /**
+     * @describe:获取课程总时长
+     * @User:tzq
+     * @Date:2017/12/19
+     * @param string $folderids 课程id多个用逗号隔开
+     * @return array array('folderid1'=>array('folderid'=>1234,'cwlength'=>4567),
+     *                     'folderid2'=>array('folderid'=>1234,'cwlength'=>4567)
+     *                         )
+     */
+    public function getLengthByFolderid($folderids){
+        // if(empty($folderids)){
+        //     return FALSE;
+        // }
+        $where = array();
+        $where[] = '`ro`.`folderid` IN('.$folderids.')';
+        $where[] = '`co`.`status`=1';
+        $sql = 'SELECT `ro`.`folderid`,SUM(`co`.`cwlength`) `cwlength` ';
+        $sql .= 'FROM `ebh_roomcourses` `ro` ';
+        $sql .= ' INNER JOIN `ebh_coursewares` `co` ON `ro`.`cwid`=`co`.`cwid` ';
+        $sql .= ' WHERE '.implode(' AND ',$where);
+        $sql .= ' GROUP BY `ro`.`folderid` ORDER BY NULL';
+        return $this->db->query($sql)->list_array('folderid');
+    }
+
+
+    /**
+     * @describe:获取课件列表
+     * @User:tzq
+     * @Date:2017/12/22
+     * @param int $crid     网校id
+     * @param int $uid      用户id
+     * @param int $folderids  课程id
+     * @return
+     */
+    public function getCourseList($crid,$uid,$folderids){
+        if (empty($crid) || empty($uid) || empty($folderids)) {
+            return FALSE;
+        }
+        $where   = array();
+        $where[] = '`co`.`cwlength`>0';//统计学习时长大于0的减少查询记录
+        $where[] = '`ro`.`folderid` IN(' . $folderids . ')';//
+        $where[] = '`ro`.`crid`=' . $crid;
+        $where[] = '`co`.`status` >= 0';//判断状态
+        $sql = 'SELECT `ro`.`folderid`,`co`.`cwid` FROM `ebh_roomcourses` `ro` ';
+        $sql .= 'JOIN `ebh_coursewares` `co` ON `ro`.`cwid`=`co`.`cwid` ';
+        $sql .= ' WHERE ' . implode(' AND ', $where);
+        return $this->db->query($sql)->list_array('cwid');//获取课件列表
+    }
+
 }

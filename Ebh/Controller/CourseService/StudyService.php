@@ -1319,11 +1319,8 @@ class StudyServiceController extends Controller {
             unset($keys, $values, $indexs);
             foreach ($items as $item) {
                 $pid = $item['pid'];
-                if ($group[$pid]['count'] < $column) {
-                    $group[$pid]['count']++;
-                    $group[$pid]['services'][] = $item;
-                    continue;
-                }
+                $group[$pid]['count']++;
+                $group[$pid]['services'][] = $item;
             }
             $columns = $indexs = array();
             foreach ($group as &$item) {

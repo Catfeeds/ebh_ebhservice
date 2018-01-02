@@ -51,15 +51,17 @@ class LogController extends Controller{
 		if(!empty($loglist)){
 			$config = Ebh()->config->get('logdescription');
 			foreach($loglist as &$log){
-				if(!empty($config[$log['detailtype']])){
-					$log['typestr'] = $config[$log['detailtype']]['typestr'];
-				}
-                if(!empty($this->roomtype) && $this->roomtype == 'com'){
-                    $log['typestr'] = str_replace('[student]','员工',$log['typestr']);
-                    $log['typestr'] = str_replace('[teacher]','讲师',$log['typestr']);
-                }else{
-                    $log['typestr'] = str_replace('[student]','学生',$log['typestr']);
-                    $log['typestr'] = str_replace('[teacher]','教师',$log['typestr']);
+                if(!empty($config[$log['detailtype']])){
+                    $log['typestr'] = $config[$log['detailtype']]['typestr'];
+                }
+                if(!empty($log['typestr'])){
+                    if(!empty($this->roomtype) && $this->roomtype == 'com'){
+                        $log['typestr'] = str_replace('[student]','员工',$log['typestr']);
+                        $log['typestr'] = str_replace('[teacher]','讲师',$log['typestr']);
+                    }else{
+                        $log['typestr'] = str_replace('[student]','学生',$log['typestr']);
+                        $log['typestr'] = str_replace('[teacher]','教师',$log['typestr']);
+                    }
                 }
 			}
 		}

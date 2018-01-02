@@ -269,6 +269,14 @@ class RoomController extends Controller
                 'ebhbrowser' => array(
                     'name' => 'ebhbrowser',
                     'type' => 'int'
+                ),
+                'isbanbuy' => array(
+                    'name' => 'isbanbuy',
+                    'type' => 'int'
+                ),
+                'isbanregister' => array(
+                    'name' => 'isbanregister',
+                    'type' => 'int'
                 )
             ),
             //登录限制
@@ -1036,6 +1044,12 @@ class RoomController extends Controller
         }
         if ($this->ebhbrowser !== NULL) {
             $params['ebhbrowser'] = min(1, max(0, $this->ebhbrowser));
+        }
+        if ($this->isbanbuy !== NULL) {
+            $params['isbanbuy'] = min(1, max(0, $this->isbanbuy));
+        }
+        if ($this->isbanregister !== NULL) {
+            $params['isbanregister'] = min(1, max(0, $this->isbanregister));
         }
         if ($model->exists($this->crid)) {
             return $model->update($this->crid, $params);

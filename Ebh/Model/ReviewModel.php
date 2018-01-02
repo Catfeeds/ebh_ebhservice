@@ -395,4 +395,22 @@ class ReviewModel {
         // $sql = 'delete r.* from ebh_reviews r where r.logid='.$logid;
         // return $this->db->simple_query($sql);
     }
+
+    /**
+     * 根据logid获取评论和课程,课件详情
+     * @param $logid
+     * @return mixed
+     */
+    public function getDetailByLogid($logid,$crid){
+        if(empty($logid) || !is_numeric($logid) || empty($crid) || !is_numeric($crid)){
+            return false;
+        }
+        $sql = 'SELECT re.logid,re.dateline,re.subject,re.uid,re.toid,re.type,re.fromip,u.uid,u.username,u.realname,u.sex,u.groupid,c.title,f.folderid,f.foldername FROM ebh_reviews re'.
+                ' LEFT JOIN ebh_users u ON (u.uid = re.uid)'.
+                ' LEFT JOIN ebh_roomcourses rc ON (rc.cwid=re.toid)'.
+                ' LEFT JOIN ebh_coursewares c ON (c.cwid=re.toid)'.
+                ' LEFT JOIN ebh_folders f ON (f.folderid=rc.folderid)'.
+                ' WHERE re.type = \'courseware\' AND re.upid = 0 AND re.logid ='.intval($logid).' AND rc.crid='.intval($crid);
+        return Ebh()->db->query($sql)->row_array();
+    }
 }

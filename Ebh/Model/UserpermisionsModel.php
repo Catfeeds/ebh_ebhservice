@@ -6,7 +6,6 @@
  * Time: 11:04
  */
 class UserpermisionsModel{
-
     /**
      * 校验用户是否拥有课件权限
      * @param $uid
@@ -49,7 +48,7 @@ class UserpermisionsModel{
 
         if($user['groupid'] == 6){
             //如果是学生 判断userpermision表
-            $sql = 'select count(pid) as count from ebh_userpermisions where  folderid='.$folderid.' and uid='.$uid.' and crid='.$crid.' and enddate >'.SYSTIME;
+            $sql = 'select count(pid) as count from ebh_userpermisions where  folderid='.$folderid.' and cwid=0 and uid='.$uid.' and crid='.$crid.' and enddate >'.SYSTIME;
             $rs  = Ebh()->db->query($sql)->row_array();
             if($rs && $rs['count'] > 0){
                 return true;
@@ -254,16 +253,19 @@ class UserpermisionsModel{
      * @param array $folderids 课程ID集
      * @param int $uid 学生ID
      * @param int $crid 网校ID
+     * @param bool $retain 是否保留过期课程
      * @return array
      */
-    public function checkPermission($folderids, $uid, $crid) {
+    public function checkPermission($folderids, $uid, $crid, $retain = false) {
         $now = SYSTIME - 86400;
         $wheres = array(
             '`uid`='.$uid,
             '`crid`='.$crid,
-            '`cwid`=0',
-            '`enddate`>='.$now
+            '`cwid`=0'
         );
+        if (!$retain) {
+            $wheres[] = '`enddate`>='.$now;
+        }
         if (!empty($folderids)) {
             if (is_array($folderids)) {
                 $wheres[] = '`folderid` IN('.implode(',', $folderids).')';
@@ -271,7 +273,7 @@ class UserpermisionsModel{
                 $wheres[] = '`folderid`='.intval($folderids);
             }
         }
-        $sql = 'SELECT `folderid` FROM `ebh_userpermisions` WHERE '.implode(' AND ', $wheres);
+        $sql = 'SELECT `folderid` FROM `ebh_userpermisions` WHERE '.implode(' AND ', $wheres).' ORDER BY `enddate` ASC';
         $ret = Ebh()->db->query($sql)->list_field('folderid', 'folderid');
         if (empty($ret)) {
             return array();
@@ -286,20 +288,25 @@ class UserpermisionsModel{
      * @param int $type 权限类型：0-课程，1-课件
      * @return array
      */
-    public function getPermissions($uid, $crid, $type = 0) {
+    public function getService($uid, $crid = 0, $type = 0) {
         $wheres = array(
-            '`uid`='.$uid,
-            '`crid`='.$crid
+            '`a`.`uid`='.$uid
         );
-        if ($type == 1) {
-            $wheres[] = '`cwid`>0';
-            $sql = 'SELECT `cwid`,MAX(`enddate`) AS `enddate` FROM `ebh_userpermisions` WHERE '.implode(' AND ', $wheres).' GROUP BY `cwid`';
-            return Ebh()->db->query($sql)->list_array('cwid');
-        } else {
-            $wheres[] = '`cwid`=0';
-            $sql = 'SELECT `folderid`,MAX(`enddate`) AS `enddate` FROM `ebh_userpermisions` WHERE '.implode(' AND ', $wheres).' GROUP BY `folderid`';
-            return Ebh()->query($sql)->list_array('folderid');
+        if ($crid > 0) {
+            $wheres[] = '`a`.`crid`='.$crid;
         }
+        if ($type == 1) {
+            $wheres[] = '`a`.`cwid`>0';
+            $wheres[] = '`b`.`status`=1';
+            $sql = 'SELECT `a`.`cwid`,`a`.`enddate`,`a`.`dateline` AS `updateline`,`b`.`viewnum`,`c`.`crid`,`c`.`cwpay` FROM `ebh_userpermisions` `a` JOIN `ebh_coursewares` `b` ON `b`.`cwid`=`a`.`cwid` LEFT JOIN `ebh_roomcourses` `c` ON `c`.`cwid`=`b`.`cwid` AND `c`.`folderid`=`a`.`folderid` WHERE '.implode(' AND ', $wheres);
+            $ret = Ebh()->db->query($sql)->list_array('cwid');
+            return !empty($ret) ? $ret : array();
+        }
+        $wheres[] = '`a`.`cwid`=0';
+        $wheres[] = '`b`.`del`=0';
+        $sql = 'SELECT `a`.`folderid`,`a`.`enddate`,`a`.`dateline` AS `updateline`,`a`.`crid`,`a`.`itemid`,`b`.`credit`,`b`.`foldername`,`b`.`img`,`b`.`coursewarenum`,`b`.`viewnum`,IF(`b`.`isschoolfree`=1 AND `b`.`crid`='.$crid.',1,0) AS `isschoolfree`,`b`.`showmode` FROM `ebh_userpermisions` `a` JOIN `ebh_folders` `b` ON `b`.`folderid`=`a`.`folderid` WHERE '.implode(' AND ', $wheres);
+        $ret = Ebh()->db->query($sql)->list_array('folderid');
+        return !empty($ret) ? $ret : array();
     }
 
     /**

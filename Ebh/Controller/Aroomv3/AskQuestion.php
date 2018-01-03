@@ -94,6 +94,14 @@ class AskQuestionController extends Controller {
                     'type' => 'int',
                     'require' => true
                 )
+            ),
+            //根据qid获取问题详情
+            'getAskByQidAction' => array(
+                'qid' => array(
+                    'name' => 'qid',
+                    'type' => 'int',
+                    'require' => true
+                )
             )
         );
     }
@@ -204,5 +212,15 @@ class AskQuestionController extends Controller {
         $model = new AskQuestionModel();
         $shield = $this->shield == 0 ? 0 : 1;
         return $model->setShield($this->qid, $this->crid, $shield);
+    }
+    /**
+     * 根据qid获取问题详情
+     */
+    public function getAskByQidAction() {
+        $filters = array();
+        $model = new AskQuestionModel();
+        $filters['qid'] = $this->qid;
+        $filters['changestatus'] = 1;   //等于1，获取的问题详情时，去除当前问题shield状态是否为0的判断
+        return $model->detail($filters);
     }
 }

@@ -324,6 +324,9 @@ class PaysortModel{
      * @return array
      */
 	public function getSortMenuList($sids, $pid = 0) {
+	    if (empty($sids)) {
+	        return array();
+        }
 	    $wheres = array('`sid` IN('.implode(',', $sids).')');
 	    if ($pid > 0) {
 	        $wheres[] = '`pid`='.$pid;

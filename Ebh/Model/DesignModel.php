@@ -175,21 +175,43 @@ class DesignModel{
      * @param int $crid 网校ID
      * @param string $roomtype 网校类型：普通网校-edu，企业网校-com
      * @param int $clientType 客户端类型：0-PC端，1-移动端
+     * @param bool $checked 是否选择
      * @return bool
      */
-    public function chooseDesign($did, $crid, $roomtype, $clientType) {
+    public function chooseDesign($did, $crid, $roomtype, $clientType, $checked = true) {
+        if ($checked) {
+            if ($clientType == 1) {
+                //启用移动端装扮
+                $isdesign = '`isdesign` | 2';
+            } else if ($did > 0) {
+                //启用PC端扮装
+                $isdesign = '`isdesign` | 1';
+            } else {
+                //启用Plate
+                $isdesign = '`isdesign` & 2';
+            }
+        } else {
+            if ($clientType == 1) {
+                //取消移动端装扮
+                $isdesign = '`isdesign` & 1';
+            } else {
+                //取消PC端扮装
+                $isdesign = '`isdesign` & 2';
+            }
+        }
+
         Ebh()->db->begin_trans();
         Ebh()->db->update('ebh_roomdesigns', array('checked' => 0), array('crid' => $crid, 'roomtype' => $roomtype, 'client_type' => $clientType));
         if (Ebh()->db->trans_status() === false) {
             Ebh()->db->rollback_trans();
             return false;
         }
-        Ebh()->db->update('ebh_roomdesigns', array('checked' => 1), array('did' => $did, 'crid' => $crid, 'roomtype' => $roomtype, 'client_type' => $clientType));
+        Ebh()->db->update('ebh_roomdesigns', array('checked' => $checked), array('did' => $did, 'crid' => $crid, 'roomtype' => $roomtype, 'client_type' => $clientType));
         if (Ebh()->db->trans_status() === false) {
             Ebh()->db->rollback_trans();
             return false;
         }
-        Ebh()->db->update('ebh_classrooms', array('isdesign' => $did > 0 ? 1 : 0), array('crid' => $crid));
+        Ebh()->db->update('ebh_classrooms', array(), array('crid' => $crid), array('isdesign' => $isdesign));
         if (Ebh()->db->trans_status() === false) {
             Ebh()->db->rollback_trans();
             return false;

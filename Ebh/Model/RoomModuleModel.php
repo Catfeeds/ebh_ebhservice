@@ -19,7 +19,7 @@ class RoomModuleModel
         $crid = (int) $crid;
         if ($tor == 0) {
             //for学生
-            $sql = 'SELECT `a`.`moduleid`,IF(`a`.`nickname`=\'\',`b`.`modulename`,`a`.`nickname`) AS `nickname`,`a`.`available`,`a`.`displayorder`,`a`.`ismore`,`b`.`classname`,`b`.`remark`,`b`.`modulecode`
+            $sql = 'SELECT `a`.`moduleid`,IF(`a`.`nickname`=\'\',`b`.`modulename`,`a`.`nickname`) AS `nickname`,`a`.`available`,`a`.`displayorder`,`a`.`ismore`,`b`.`classname`,`b`.`remark`,`b`.`modulecode`,`b`.`url`,`b`.`target`
                 FROM `ebh_roommodules` `a` LEFT JOIN `ebh_appmodules` `b` ON `a`.`moduleid`=`b`.`moduleid` 
                 WHERE `a`.`crid`='.$crid.' AND `a`.`tors`=0 AND `b`.`tors` IN(0,2) AND `b`.`showmode`=0';
         } else if($tor == 1) {

@@ -101,6 +101,11 @@ class DesignController extends Controller
                     'require' => true,
                     'min' => 0,
                     'max' => 1
+                ),
+                'checked' => array(
+                    'name' => 'checked',
+                    'type' => 'boolean',
+                    'default' => true
                 )
             ),
             //根据did获取网校装扮列表
@@ -186,7 +191,7 @@ class DesignController extends Controller
      */
     public function chooseDesignAction() {
         $model = new DesignModel();
-        return $model->chooseDesign($this->did, $this->crid, $this->roomtype, $this->clientType);
+        return $model->chooseDesign($this->did, $this->crid, $this->roomtype, $this->clientType, $this->checked);
     }
 
     /**

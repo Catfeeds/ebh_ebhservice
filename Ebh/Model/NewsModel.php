@@ -40,6 +40,9 @@ class NewsModel {
         if (isset($params['ip'])) {
             $formatParams['ip'] = $params['ip'];
         }
+		if (isset($params['attid'])) {
+            $formatParams['attid'] = $params['attid'];
+        }
         if (isset($params['status'])) {
             $status = intval($params['status']);
             $formatParams['status'] = min(1, max(0, $status));
@@ -92,6 +95,9 @@ class NewsModel {
             $status = intval($params['status']);
             $formatParams['status'] = min(2, max(-1, $status));
         }
+		if (isset($params['attid'])) {
+            $formatParams['attid'] = $params['attid'];
+        }
         if (empty($formatParams)) {
             return 0;
         }
@@ -119,7 +125,7 @@ class NewsModel {
      */
     public function getModel($itemid) {
         $itemid = (int) $itemid;
-        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status` FROM `ebh_news` WHERE `itemid`='.$itemid;
+        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status`,`attid` FROM `ebh_news` WHERE `itemid`='.$itemid;
         return Ebh()->db->query($sql)->row_array();
     }
 

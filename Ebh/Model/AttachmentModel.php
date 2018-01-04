@@ -321,5 +321,14 @@ class AttachmentModel {
         $sql = 'SELECT `b`.`url`,`b`.`source`,`b`.`suffix`,`b`.`filename`,`b`.`attid` FROM `ebh_folder_intros` `a` JOIN `ebh_attachments` `b` ON `b`.`attid`=`a`.`attid` WHERE `a`.`attid`='.intval($attid).' AND `b`.`status`=1';
         return Ebh()->db->query($sql)->row_array();
     }
+	
+	/*
+	 *获取多个附件，资讯和网校详情用
+	*/
+	public function getMultiAttachByAttid($attid,$crid){
+		$fields = array('`attid`', '`cwid`', '`sourceid`', '`source`', '`url`', '`filename`', '`suffix`', '`size`');
+        $sql = 'SELECT '.implode(',', $fields).' FROM `ebh_attachments` WHERE `attid` in ('.$attid.') and crid='.$crid;
+        return Ebh()->db->query($sql)->list_array();
+	}
 
 }

@@ -143,6 +143,10 @@ class NewsController extends Controller
                 'displayorder' => array(
                     'name' => 'displayorder',
                     'type' => 'int'
+                ),
+				'attid' => array(
+                    'name' => 'attid',
+                    'type' => 'string'
                 )
             ),
             //更新资讯
@@ -197,6 +201,10 @@ class NewsController extends Controller
                 'displayorder' => array(
                     'name' => 'displayorder',
                     'type' => 'int'
+                ),
+				'attid' => array(
+                    'name' => 'attid',
+                    'type' => 'string'
                 )
             ),
             //删除资讯
@@ -346,7 +354,16 @@ class NewsController extends Controller
      */
     public function detailAction() {
         $model = new NewsModel();
-        return $model->getModel($this->itemid);
+        $news = $model->getModel($this->itemid);
+		//加入附件信息
+		if(!empty($news['attid'])){
+			$attrModel = new AttachmentModel();
+			$attr = $attrModel->getMultiAttachByAttid($news['attid'],$news['crid']);
+			if (!empty($attr)) {
+				$news['attr'] = $attr;
+			}
+		}
+		return $news;
     }
 
     /**
@@ -374,6 +391,9 @@ class NewsController extends Controller
         }
         if ($this->ip !== NULL) {
             $params['ip'] = $this->ip;
+        }
+		if ($this->attid !== NULL) {
+            $params['attid'] = $this->attid;
         }
         return $model->add($this->crid, $this->uid, $params);
     }
@@ -410,6 +430,9 @@ class NewsController extends Controller
         }
         if ($this->ip !== NULL) {
             $params['ip'] = $this->ip;
+        }
+		if ($this->attid !== NULL) {
+            $params['attid'] = $this->attid;
         }
         if (empty($params)) {
             return 0;

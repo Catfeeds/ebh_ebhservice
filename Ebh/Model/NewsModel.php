@@ -277,9 +277,9 @@ class NewsModel {
             $params[] = '`status`='.intval($filterParams['status']);
         }
         if (isset($filterParams['type'])) {
-            $params['type'] = $filterParams['type'];
+            $params[] = '`type`='.intval($filterParams['type']);//原创文章类型为1，其他为0
         } else {
-            $params['type'] = 0;
+            $params[] = '`type`=0';
         }
         if (isset($filterParams['early'])) {
             $params[] = '`dateline`>='.intval($filterParams['early']);

@@ -96,6 +96,9 @@ $logdescription = array(
 
     'choosedesign'=>array('message'=>'启用[clientType]版装扮: [title]',
         'opid'=>2,'type'=>'design','typestr'=>'启用装扮'),
+    
+    'canceldesign'=>array('message'=>'取消[clientType]版装扮: [title]',
+        'opid'=>2,'type'=>'design','typestr'=>'取消装扮'),
 
     //-------------通知消息
     'addnotice'=> array('message'=>'发布标题为:[title] 的通知消息',

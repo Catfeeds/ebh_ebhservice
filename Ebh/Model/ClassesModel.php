@@ -31,6 +31,9 @@ class ClassesModel{
         if(!empty($param['crid'])){
             $wherearr[] = 'c.crid='.$param['crid'];
         }
+        if(!empty($param['headteacherid'])){
+            $wherearr[] = 'c.headteacherid='.$param['headteacherid'];
+        }
         if(!empty($param['q'])){
             $wherearr[] = ' c.classname like \'%' . Ebh()->db->escape_str($param['q']) . '%\'';
         }

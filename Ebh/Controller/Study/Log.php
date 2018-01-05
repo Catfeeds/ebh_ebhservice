@@ -47,6 +47,10 @@ class LogController extends Controller{
                 'uid'  =>  array('name'=>'uid','type'=>'int','require'=>true),
                 'cwids'  =>  array('name'=>'cwids','type'=>'string','require'=>true)
             ),
+            'listv2Action'   =>  array(
+                'uids'  =>  array('name'=>'uids','type'=>'string','require'=>true),
+                'cwids'  =>  array('name'=>'cwids','type'=>'string','require'=>true)
+            ),
             'newcourseAction'   =>  array(
                 'uid'  =>  array('name'=>'uid','type'=>'int','require'=>true),
                 'crid'  =>  array('name'=>'crid','type'=>'int','require'=>true)
@@ -179,6 +183,32 @@ class LogController extends Controller{
                 if (intval($cwid) <= 0)
                     continue;
                 $loglist[$cwid] = $this->_getTotalLog($uid,$cwid,TRUE);
+            }
+        }
+        return $loglist;
+    }
+
+    /**
+     * 新列表 用于获取多个用户多个课件的学习记录
+     */
+    public function listv2Action() {
+        $loglist = array();
+        $uids = $this->uids;
+        $cwids = $this->cwids;  //课件的id组合，逗号隔开，如 10983,10984
+        if (!empty($cwids) && !empty($uids)) {
+            $cwidlist = explode(',', $cwids);
+            $uidlist = explode(',',$uids);
+
+            foreach ($uidlist as $uid){
+                if($uid <=0){
+                    continue;
+                }
+                foreach ($cwidlist as $cwid){
+                    if (intval($cwid) <= 0){
+                        continue;
+                    }
+                    $loglist[$uid.'_'.$cwid] = $this->_getTotalLog($uid,$cwid,TRUE);
+                }
             }
         }
         return $loglist;

@@ -546,6 +546,7 @@ class StudyServiceController extends Controller {
             $list = array_slice($list, $offset, $this->pagesize);
         }
         $list = $this->group($list, $packages, $this->column, $this->pid);
+        //return $list;
         $ret = array(
             'classrooms' => $classrooms,
             'packages' => $packages,
@@ -1302,41 +1303,103 @@ class StudyServiceController extends Controller {
                 )
             );
         }
+        //最大行数
+        $maxRow = 20;
         if ($pid == 0) {
-            //定位package全部，按package分组，每组一行数据，最多返回20组，优先payitem全列的数据
+            //定位package全部，按package分组，最多返回[$maxRow]组并且最多显示[$maxRow]行，超过[$maxRow]组的每组一行数据，不足[$maxRow]组的可能显示多行数据但总数不能超[$maxRow]行，优先payitem全列的数据
             $keys = array_column($packages, 'pid');
-            $indexs = array_keys($packages);
-            $values = array_map(function($package, $index) {
+            $group = array_combine($keys, array_map(function($package) {
                 return array(
                     'pid' => $package['pid'],
                     'pname' => $package['pname'],
-                    'index' => $index,
-                    'count' => 0,
                     'services' => array()
                 );
-            }, $packages, $indexs);
-            $group = array_combine($keys, $values);
-            unset($keys, $values, $indexs);
+            }, $packages));
+            //分组数据统计、行数统计
+            $rowCounts = $counts = array_fill_keys($keys, 0);
             foreach ($items as $item) {
                 $pid = $item['pid'];
-                $group[$pid]['count']++;
                 $group[$pid]['services'][] = $item;
+                $rowCounts[$pid] = ceil(++$counts[$pid] / $column);
             }
-            $columns = $indexs = array();
-            foreach ($group as &$item) {
-                $columns[] = $item['count'] == $column ? 1 : 0;
-                $indexs[] = $item['index'];
-                unset($item['count'], $item['index']);
+            $rowCounts = array_sum($rowCounts);
+            if ($rowCounts <= $maxRow) {
+                //课程少于最大行数，无需筛选直接全部返回
+                return array_values($group);
             }
-            array_multisort($columns, SORT_DESC, SORT_NUMERIC,
-                $indexs, SORT_ASC, SORT_NUMERIC, $group);
-            return array_slice($group, 0, 20);
+            $groupCount = count($group);
+            if ($groupCount > $maxRow) {
+                $indexs = array_keys($packages);
+                //大于[$maxRow]组选择[$maxRow]组数据,优先选择整列数据的分组
+                $ranks = array_map(function($count) use($column) {
+                    return $count >= $column ? 1 : 0;
+                }, $counts);
+                array_multisort($ranks, SORT_DESC, SORT_NUMERIC,
+                    $indexs, SORT_ASC, SORT_NUMERIC, $keys);
+                $keys = array_slice($keys, 0, $maxRow);
+                $keys = array_flip($keys);
+                $group = array_intersect_key($group, $keys);
+                $counts = array_intersect_key($counts, $keys);
+                unset($keys, $indexs, $ranks);
+            }
+            if ($groupCount == $maxRow) {
+                array_walk($group, function(&$groupitem, $pid, $column) {
+                    $groupitem['services'] = array_slice($groupitem['services'], 0, $column);
+                }, $column);
+                return array_values($group);
+            }
+            $rowCounts = array_map(function() {
+                return 1;
+            }, $counts);
+            $step = 2;
+            $largeGroup = array_filter($counts, function($c) use($column, $step) {
+                return $c >= $column * $step;
+            });
+            while (!empty($largeGroup)) {
+                $surplus = $maxRow - array_sum($rowCounts);
+                $len = count($largeGroup);
+                $largeGroup = array_slice($largeGroup, 0, $surplus, true);
+                array_walk($rowCounts, function(&$rowCount, $idx, $counts) {
+                    if (isset($counts[$idx])) {
+                        $rowCount++;
+                    }
+                }, $largeGroup);
+                if ($len >= $surplus) {
+                    break;
+                }
+                $step++;
+                $largeGroup = array_filter($largeGroup, function($c) use($column, $step) {
+                    return $c >= $column * $step;
+                });
+            }
+            $surplus = $maxRow - array_sum($rowCounts);
+            if ($surplus > 0) {
+                //行数不足处理
+                $largeGroup = array_filter($counts, function($c) use($column) {
+                    return $c > $column && ($c % $column) > 0;
+                });
+                $largeGroup = array_slice($largeGroup, 0, $surplus, true);
+                array_walk($rowCounts, function(&$row, $idx, $largeGroup) {
+                    if (isset($largeGroup[$idx])) {
+                        $row++;
+                    }
+                }, $largeGroup);
+            }
+            $rowCounts = array_map(function($rowCount) use($column) {
+                return $rowCount * $column;
+            }, $rowCounts);
+            array_walk($group, function(&$gitem, $idx, $rowCounts) {
+                if (isset($rowCounts[$idx])) {
+                    $gitem['services'] = array_slice($gitem['services'], 0, $rowCounts[$idx]);
+                }
+            }, $rowCounts);
+            return array_values($group);
         }
         if ($column == 4) {
             //主页4列课程列表
             return array(
                 array(
-                    'services' => array_slice($items, 0, 80)
+                    'services' => array_slice($items, 0, 4 * $maxRow)
                 )
             );
         }
@@ -1381,22 +1444,22 @@ class StudyServiceController extends Controller {
         $normal_rows = 0;
         $other_rows = 0;
         for ($i = 0; $i < $rows; $i++) {
-            if ($normal_rows + $other_rows >= 20) {
+            if ($normal_rows + $other_rows >= $maxRow) {
                 break;
             }
             if (key_exists($i, $group_big)) {
                 $tmp[] = array('view_mode' => 2, 'services' => $group_big[$i]);
-                $other_rows++;
+                $other_rows += count($group_big[$i]);
                 continue;
             }
             if (key_exists($i, $group_normal)) {
                 $tmp[] = array('view_mode' => 0, 'services' => $group_normal[$i]);
-                $normal_rows++;
+                $normal_rows += ceil(count($group_normal[$i]) / 3);
                 continue;
             }
             if (key_exists($i, $group_small)) {
                 $tmp[] = array('view_mode' => 1, 'services' => $group_small[$i]);
-                $other_rows++;
+                $other_rows += ceil(count($group_small[$i]) / 2);
                 continue;
             }
         }

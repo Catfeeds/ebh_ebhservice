@@ -163,7 +163,7 @@ class AttendancesModel{
         if (!empty($queryarr['order'])){
             $sql .= ' ORDER BY ' . $param['order'];
         }else{
-            $sql .= ' ORDER BY att.dateline DESC ';
+            $sql .= ' ORDER BY att.dateline DESC,u.uid desc ';
         }
         if (!empty($param['limit'])) {
             $sql .= ' limit ' . $param['limit'];

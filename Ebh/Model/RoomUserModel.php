@@ -904,4 +904,24 @@ where ru.crid='.$crid.' and u.groupid=6 and (u.credit > '.$mycredit.' or (u.cred
         $res = Ebh()->db->query($sql)->row_array();
         return $res['c'];
     }
+	
+	/*
+	账号密码验证用户是否在某网校
+	@return $uid
+	*/
+	public function verifyRoomUserByPassword($param){
+		if(empty($param['username']) || empty($param['password']) || empty($param['crid'])){
+			return FALSE;
+		}
+		$username = Ebh()->db->escape_str($param['username']);
+		$password = Ebh()->db->escape_str($param['password']);
+		$sql = 'select u.uid from ebh_roomusers ru 
+				join ebh_users u on u.uid=ru.uid';
+		$wherearr[] = 'username=\''.$username.'\'';
+		$wherearr[] = 'password=\''.$password.'\'';
+		$wherearr[] = 'crid='.$param['crid'];
+		$sql.= ' where '.implode(' AND ',$wherearr);
+		$user = Ebh()->db->query($sql)->row_array();
+		return $user['uid'];
+	}
 }

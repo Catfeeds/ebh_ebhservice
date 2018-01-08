@@ -391,6 +391,23 @@ class LoginlogModel {
 		return Ebh()->db->query($sql)->list_array('uid');
 		
 	}
+	
+	/*
+	 * 一个学生末次登录信息
+	*/
+	public function lastLogin($param){
+		if(empty($param['crid']) || empty($param['uid'])){
+			return array();
+		}
+		$sql = 'select uid,dateline,ip from ebh_loginlogs';
+		$wherearr[] = 'crid='.$param['crid'];
+		$wherearr[] = 'uid='.$param['uid'];
+		$sql.= ' where '.implode(' AND ',$wherearr);
+		$sql.= ' order by logid desc';
+		$sql.= ' limit 1';
+		// log_message($sql);
+		return Ebh()->db->query($sql)->row_array();
+	}
 
     /*
     根据区域名称查询信息
@@ -402,4 +419,47 @@ class LoginlogModel {
         $sql = 'select citycode from ebh_cities where cityname like \''.$cityname.'%\'';
         return Ebh()->db->query($sql)->row_array();
     }
+	
+	/*
+	 * 添加日志
+	*/
+	public function add($param){
+		if(empty($param['uid']) || empty($param['crid'])){
+			return FALSE;
+		}
+		$setarr = array();
+		if(!empty($param['ip']))
+			$setarr['ip'] = $param['ip'];
+		if(!empty($param['system']))
+			$setarr['system'] = $param['system'];
+		if(!empty($param['systemversion']))
+			$setarr['systemversion'] = $param['systemversion'];
+		if(!empty($param['browser']))
+			$setarr['browser'] = $param['browser'];
+		if(!empty($param['broversion']))
+			$setarr['broversion'] = $param['broversion'];
+		if(!empty($param['screen']))
+			$setarr['screen'] = $param['screen'];
+		if(!empty($param['citycode']))
+			$setarr['citycode'] = $param['citycode'];
+		if(!empty($param['parentcode']))
+			$setarr['parentcode'] = $param['parentcode'];
+		if(!empty($param['ismobile']))
+			$setarr['ismobile'] = $param['ismobile'];
+		if(!empty($param['isp']))
+			$setarr['isp'] = $param['isp'];
+		if(!empty($param['mac']))
+			$setarr['mac'] = $param['mac'];
+		if(!empty($param['logtype']))
+			$setarr['logtype'] = $param['logtype'];
+		if(!empty($param['dateline'])){
+			$setarr['dateline'] = $param['dateline'];
+		} else {
+			$setarr['dateline'] = SYSTIME;
+		}
+		$setarr['crid'] = $param['crid'];
+		$setarr['uid'] = $param['uid'];
+		$logid = Ebh()->db->insert('ebh_loginlogs',$setarr);
+		return $logid;
+	}
 }

@@ -798,4 +798,20 @@ class PayorderModel{
 		}
 		return $count;
 	}
+
+    /**
+     * 获取用户一分钟内支付的订单
+     * @param int $uid 用户ID
+     * @return mixed
+     */
+	public function getLatestPayedOrder($uid) {
+	    //读取1分钟内支付的订单
+        $baseTime = SYSTIME - 60;
+	    $wheres = array(
+	        '`uid`='.$uid,
+            '`status`=1'
+        );
+	    $sql = 'SELECT `orderid`,`crid`,`dateline` FROM `ebh_pay_orders` WHERE '.implode(' AND ', $wheres).' ORDER BY `orderid` DESC LIMIT 1';
+	    return Ebh()->db->query($sql)->row_array();
+    }
 }

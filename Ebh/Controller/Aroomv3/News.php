@@ -49,6 +49,10 @@ class NewsController extends Controller
                 'q' => array(
                     'name' => 'q',
                     'type' => 'string'
+                ),
+                'ranktype' => array(
+                    'name' => 'ranktype',
+                    'type' => 'string'
                 )
             ),
             //资讯分类
@@ -143,6 +147,10 @@ class NewsController extends Controller
                 'displayorder' => array(
                     'name' => 'displayorder',
                     'type' => 'int'
+                ),
+				'attid' => array(
+                    'name' => 'attid',
+                    'type' => 'string'
                 )
             ),
             //更新资讯
@@ -197,6 +205,10 @@ class NewsController extends Controller
                 'displayorder' => array(
                     'name' => 'displayorder',
                     'type' => 'int'
+                ),
+				'attid' => array(
+                    'name' => 'attid',
+                    'type' => 'string'
                 )
             ),
             //删除资讯
@@ -237,6 +249,38 @@ class NewsController extends Controller
                 'navcode' => array(
                     'name' => 'navcode',
                     'type' => 'string'
+                ),
+                'ranktype' => array(
+                    'name' => 'ranktype',
+                    'type' => 'string'
+                )
+            ),
+            //资讯移动
+            'rankNewsAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'require' => true,
+                    'type' => 'int'
+                ),
+                'itemid' => array(
+                    'name' => 'itemid',
+                    'require' => true,
+                    'type' => 'int'
+                ),
+                'ranktype' => array(
+                    'name' => 'ranktype',
+                    'require' => true,
+                    'type' => 'string'
+                ),
+                'step' => array(
+                    'name' => 'step',
+                    'require' => true,
+                    'type' => 'int'
+                ),
+                'navcode' => array(
+                    'name' => 'navcode',
+                    'require' => true,
+                    'type' => 'string'
                 )
             )
         );
@@ -261,6 +305,10 @@ class NewsController extends Controller
         }
         if (isset($this->q) && $this->q != '') {
             $filterParams['q'] = $this->q;
+        }
+        //排序类型,prank主类中资讯的排序,rank子类中资讯的排序(没有子类的资讯分类均为rank)
+        if ($this->ranktype !== NULL) {
+            $filterParams['ranktype'] = trim($this->ranktype);
         }
         return $model->getList($filterParams, array(
             'pagesize' => $this->pagesize,
@@ -346,7 +394,16 @@ class NewsController extends Controller
      */
     public function detailAction() {
         $model = new NewsModel();
-        return $model->getModel($this->itemid);
+        $news = $model->getModel($this->itemid);
+		//加入附件信息
+		if(!empty($news['attid'])){
+			$attrModel = new AttachmentModel();
+			$attr = $attrModel->getMultiAttachByAttid($news['attid'],$news['crid']);
+			if (!empty($attr)) {
+				$news['attr'] = $attr;
+			}
+		}
+		return $news;
     }
 
     /**
@@ -374,6 +431,9 @@ class NewsController extends Controller
         }
         if ($this->ip !== NULL) {
             $params['ip'] = $this->ip;
+        }
+		if ($this->attid !== NULL) {
+            $params['attid'] = $this->attid;
         }
         return $model->add($this->crid, $this->uid, $params);
     }
@@ -410,6 +470,9 @@ class NewsController extends Controller
         }
         if ($this->ip !== NULL) {
             $params['ip'] = $this->ip;
+        }
+		if ($this->attid !== NULL) {
+            $params['attid'] = $this->attid;
         }
         if (empty($params)) {
             return 0;
@@ -503,10 +566,28 @@ class NewsController extends Controller
         if(!empty($this->last)){
             $filterParams['last'] = $this->last;
         }
+        if(!empty($this->ranktype)){
+            $filterParams['ranktype'] = trim($this->ranktype);
+        }
         $newslists = $model->getNewsLists($filterParams);
         $newscount = $model->getNewsListsCount($filterParams);
         $newslists = !empty($newslists) ? $newslists : array();
         $newscount = !empty($newscount) ? $newscount : 0;
         return array('newslist'=>$newslists,'count'=>$newscount);
+    }
+
+    /**
+     * 首页资讯列表
+     * @return mixed
+     */
+    public function rankNewsAction() {
+        $model = new NewsModel();
+        $filterParams = array();
+        $filterParams['crid'] = $this->crid;
+        $filterParams['navcode'] = trim($this->navcode);//资讯分类的集合
+        $filterParams['ranktype'] = trim($this->ranktype);//排序类型,prank主类中资讯的排序,rank子类中资讯的排序(没有子类的资讯分类均为rank)
+        $filterParams['itemid'] = $this->itemid;        //资讯id
+        $filterParams['step'] = $this->step;            //资讯移动,1下移,-1上移
+        return $model->rankNews($filterParams);
     }
 }

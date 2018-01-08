@@ -27,6 +27,10 @@ class FolderController extends Controller{
 					'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int','min'=>1),
 					'folderid'  =>  array('name'=>'folderid','require'=>true,'type'=>'int','min'=>1),
 				),
+                'canpayAction'   =>  array(
+                    'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
+                    'folderid'  =>  array('name'=>'folderid','require'=>true,'type'=>'int','min'=>1),
+                ),
 				'getselectedourseAction' =>array(
 					'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>0),
 					'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int','min'=>0),
@@ -68,6 +72,7 @@ class FolderController extends Controller{
         );
     }
 
+    
     /**
      * 获取课程的学生
      * 分成网校获取拥有课程权限的学生
@@ -203,6 +208,23 @@ class FolderController extends Controller{
         return $result;
     }
 
+    /**
+     * 查看指定课程是否可以购买
+     * @return bool
+     */
+    public function canpayAction(){
+        $payitemModel = new PayitemModel();
+        $result = $payitemModel->getItemsByFolderIds($this->folderid,$this->crid);
+
+        if(!$result){
+            return false;
+        }
+
+        if($result[0]['cannotpay'] == 1){
+            return false;
+        }
+        return true;
+    }
     /**
      * 读取网校课程
      * @return array

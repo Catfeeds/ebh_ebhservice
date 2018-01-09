@@ -151,6 +151,10 @@ class NewsController extends Controller
 				'attid' => array(
                     'name' => 'attid',
                     'type' => 'string'
+                ),
+				'isinternal' => array(
+                    'name' => 'isinternal',
+                    'type' => 'string'
                 )
             ),
             //更新资讯
@@ -208,6 +212,10 @@ class NewsController extends Controller
                 ),
 				'attid' => array(
                     'name' => 'attid',
+                    'type' => 'string'
+                ),
+				'isinternal' => array(
+                    'name' => 'isinternal',
                     'type' => 'string'
                 )
             ),
@@ -435,6 +443,9 @@ class NewsController extends Controller
 		if ($this->attid !== NULL) {
             $params['attid'] = $this->attid;
         }
+		if ($this->isinternal !== NULL) {
+            $params['isinternal'] = $this->isinternal;
+        }
         return $model->add($this->crid, $this->uid, $params);
     }
 
@@ -473,6 +484,9 @@ class NewsController extends Controller
         }
 		if ($this->attid !== NULL) {
             $params['attid'] = $this->attid;
+        }
+		if ($this->isinternal !== NULL) {
+            $params['isinternal'] = $this->isinternal;
         }
         if (empty($params)) {
             return 0;

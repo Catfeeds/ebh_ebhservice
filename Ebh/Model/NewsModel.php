@@ -53,6 +53,9 @@ class NewsModel {
         if (isset($params['displayorder'])) {
             $formatParams['displayorder'] = intval($params['displayorder']);
         }
+		if (isset($params['isinternal'])) {
+            $formatParams['isinternal'] = intval($params['isinternal']);
+        }
         $res = Ebh()->db->insert('ebh_news', $formatParams);
         //发布资讯成功,更新其分类的排序号(prank,rank)
         if(!empty($res) && is_numeric($res) && empty($params['type'])){
@@ -107,6 +110,9 @@ class NewsModel {
 		if (isset($params['attid'])) {
             $formatParams['attid'] = $params['attid'];
         }
+		if (isset($params['isinternal'])) {
+            $formatParams['isinternal'] = intval($params['isinternal']);
+        }
         if (empty($formatParams)) {
             return 0;
         }
@@ -134,7 +140,7 @@ class NewsModel {
      */
     public function getModel($itemid) {
         $itemid = (int) $itemid;
-        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status`,`attid` FROM `ebh_news` WHERE `itemid`='.$itemid;
+        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status`,`attid`,`isinternal` FROM `ebh_news` WHERE `itemid`='.$itemid;
         return Ebh()->db->query($sql)->row_array();
     }
 

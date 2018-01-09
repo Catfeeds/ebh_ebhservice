@@ -219,11 +219,16 @@ class FolderController extends Controller{
         if(!$result){
             return false;
         }
+        $res['itemid'] = $result[0]['itemid'];
 
         if($result[0]['cannotpay'] == 1){
-            return false;
+            $res['canpay'] = false;
+        }else{
+            $res['canpay'] = true;
         }
-        return true;
+
+
+        return $res;
     }
     /**
      * 读取网校课程

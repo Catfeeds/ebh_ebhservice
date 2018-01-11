@@ -343,7 +343,7 @@ class StudentController extends Controller{
         $list = Ebh()->cache->get($cacheKey);
 
         if (is_array($list)) {
-            return $list;
+            //return $list;
         }
 
 
@@ -378,10 +378,10 @@ class StudentController extends Controller{
         $cacheKey                 = implodeKey($params);
         $list                     = Ebh()->cache->get($cacheKey);
         if (is_array($list)) {
-            return $list;
+           // return $list;
         }
         $list = $model->outExclgetCreditCount($params);
-        Ebh()->cache->set($cacheKey, $list, 300);
+       Ebh()->cache->set($cacheKey, $list, 300);
         return $list;
     }
 }

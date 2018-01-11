@@ -12,7 +12,7 @@ return array(
             'prefix' => 'ebh_'
         ) ,
         'memcache' => array(
-            'host' => '192.168.0.24',
+            'host' => '127.0.0.1',
             'port' => 11200,
             'prefix' => 'ebh_'
         ) ,

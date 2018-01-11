@@ -134,11 +134,12 @@ class TeacherModel{
         $tidStr = implode(',',$tidArr);
         $folderIdArr = array_unique($folderIdArr);
         $folderIdStr  = implode(',',$folderIdArr);
-        $sql = "select rc.folderid,c.uid,c.cwid,c.title,c.dateline,c.cwsize,c.cwlength,c.reviewnum,c.zannum,
-              (select count(attid) from ebh_attachments where cwid=c.cwid) as attachments_count,
-              (select count(logid) from ebh_playlogs where cwid=c.cwid and totalflag=0) as study_count
+        $sql = "select rc.folderid,c.uid,c.cwid,c.title,c.dateline,c.cwsize,c.cwlength,c.reviewnum,c.zannum
+           
             from ebh_coursewares c
             left join ebh_roomcourses rc  on (rc.cwid = c.cwid and rc.crid={$crid})";
+        //   (select count(attid) from ebh_attachments where cwid=c.cwid) as attachments_count,
+        //(select count(logid) from ebh_playlogs where cwid=c.cwid and totalflag=0) as study_count
         $coursesWhere[] = ' rc.crid='.$crid;
         $coursesWhere[] = ' c.uid in ('.$tidStr.')';
         $coursesWhere[] = ' rc.folderid in ('.$folderIdStr.')';
@@ -151,11 +152,37 @@ class TeacherModel{
         if(!empty($coursesWhere)){
             $sql.= ' where '.implode(' AND ',$coursesWhere);
         }
+        //log_message('获取主数据sql:'.$sql);
         $courses =  Ebh()->db->query($sql)->list_array();
+        //获取课件id
+        $cwidArr = array_column($courses,'cwid');
+        $cwidArr = array_unique($cwidArr);
+        //获取课件的附件数量
+        if (!empty($cwidArr)) {
+            $attachSql  = 'SELECT COUNT(*) `attachments_count`,`cwid` FROM `ebh_attachments` WHERE `cwid` IN(' . implode(',', $cwidArr) . ') GROUP BY `cwid`';
+            //log_message('获取课件附件：'.$attachSql);
+            $attachList = Ebh()->db->query($attachSql)->list_array('cwid');
+            //获取课件的学习次数
+            $studySql  = 'SELECT COUNT(*) `study_count`,`cwid` FROM `ebh_playlogs` WHERE `totalflag`=0 AND `cwid` IN(' . implode(',', $cwidArr) . ') GROUP BY `cwid`';
+            //log_message('获取学习次数：'.$studySql);
+            $studyList = Ebh()->db->query($studySql)->list_array('cwid');
+        }
+
         foreach ($courses as $course){
-            if(isset($folderList[$course['uid'].'_'.$course['folderid']])){
-                $folderList[$course['uid'].'_'.$course['folderid']]['study_count'] =   $folderList[$course['uid'].'_'.$course['folderid']]['study_count'] + $course['study_count'];
-                $folderList[$course['uid'].'_'.$course['folderid']]['course'][] = $course;
+            $cwid                        = $course['cwid'];
+            $attachCount                 = isset($attachList[$cwid]) && $attachList[$cwid]['attachments_count'] > 0 ? $attachList[$cwid]['attachments_count'] : 0;//课件附加数
+            $studyCount                  = isset($studyList[$cwid]) && $studyList[$cwid]['study_count'] > 0 ? $studyList[$cwid]['study_count'] : 0;//课件学习次数
+            $course['study_count']       = $studyCount;
+            $course['attachments_count'] = $attachCount;
+            $key                         = $course['uid'] . '_' . $course['folderid'];
+            if (isset($folderList[$key])) {
+                $folderList[$key]['study_count'] += $studyCount;//累计学习次数
+                array_push($folderList[$key]['course'], $course);
+                //$folderList[$key]['course'][] = $course;
+            } else {
+                $folderList[$key]['course'] = [];
+                array_push($folderList[$key]['course'], $course);
+                $folderList[$key]['study_count'] = $studyCount;
             }
 
         }

@@ -204,6 +204,12 @@ class ScoreController extends Controller{
             }
         }
         $param['score'] = $scoreSetting[$scorekey]['single'];
+        //把课程id添加到参数中
+        if($param['cwid'] > 0 && $param['folderid'] == 0){
+            $roomModel         = new RoomCourseModel();
+            $param['folderid'] = $roomModel->getFoderid($param['cwid']);
+
+        }
 
         $ret = $this->scoreModel->addOneScore($param);
         if($ret === false){

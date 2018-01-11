@@ -433,4 +433,35 @@ class StudycreditlogsModel{
         }
         return $result;
     }
+
+    /**
+     * @describe:更新folderid
+     * @Author:tzq
+     * @Date:2018/01/09
+     * @param string $sql 要更新的sql语句
+     * @return bool
+     */
+    public function updateFolderid($folderList){
+        $sql = 'UPDATE `ebh_studycreditlogs` SET `folderid`= CASE  ';
+        foreach ($folderList as $folderid => $cwidArr) {
+            $cwids = implode(',', $cwidArr);
+            if (!empty($cwids)){
+                $sql .= 'WHEN `cwid` IN(' . $cwids . ') THEN ' . ($folderid) . ' ';
+                $isUpdate = true;
+            }
+        }
+        $sql .= ' END WHERE `folderid`=0 AND `cwid`>0';
+        if(isset($isUpdate)){
+            //有需要更新
+            if ($this->db->query($sql))
+                return $this->db->affected_rows();
+            else
+                return false;
+        }else{
+            //没有需要更新的内容
+            return 0;
+        }
+
+
+    }
 }

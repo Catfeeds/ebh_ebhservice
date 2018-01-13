@@ -17,7 +17,7 @@ return array(
             'prefix' => 'ebh_'
         ) ,
         'redis' => array(
-            'host' => '192.168.0.24',
+            'host' => '127.0.0.1',
             'port' => 6379,
             'prefix' => 'ebh_'
         )

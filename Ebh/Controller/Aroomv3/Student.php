@@ -96,6 +96,12 @@ class StudentController extends Controller{
                 'communication'=>array('name'=>'communication','type'=>'int','require'=>true),
                 'crid'=>array('name'=>'crid','type'=>'int','require'=>true),
 
+            )   , 'getCreditListAction'=>array(
+                'beginTime'=>array('name'=>'beginTime','type'=>'int'),
+                'endTime'=>array('name'=>'endTime','type'=>'int'),
+                'crid'=>array('name'=>'crid','type'=>'int','require'=>true),
+                'uids'=>array('name'=>'uids','type'=>'string','require'=>true)
+
             )
         );
     }
@@ -383,5 +389,35 @@ class StudentController extends Controller{
         $list = $model->outExclgetCreditCount($params);
        Ebh()->cache->set($cacheKey, $list, 300);
         return $list;
+    }
+
+    /**
+     * @describe:获取一个或多个学生的时间区间学分列表
+     * @Author:tzq
+     * @Date:2018/01/13
+     * @param int $beginTime
+     * @param int $endTime
+     * @param int $crid
+     * @param string $uids
+     * @return array
+     */
+    public function getCreditListAction(){
+        $crid      = intval($this->crid);
+        $uids      = $this->uids;
+        $beginTime = intval($this->beginTime);
+        $endTime   = intval($this->endTime);
+        //验证uid的数据是否合法
+        if (!preg_match('/^((\d,?)*)\d$/', $uids)) {
+            return false;
+        }
+        $param              = [];
+        $param['crid']      = $crid;
+        $param['uids']      = $uids;
+        $param['beginTime'] = $beginTime;
+        $param['endTime']   = $endTime;
+
+        $studyMolde = new StudycreditlogsModel();//获取学分的模型
+        $ret        = $studyMolde->getCreditList($param);
+        return $ret;
     }
 }

@@ -464,4 +464,48 @@ class StudycreditlogsModel{
 
 
     }
+
+    /**
+     * @describe:获取单个或者多个用户的学分
+     * @Author:tzq
+     * @Date:2018/01/13
+     * @param int $crid 网校id
+     * @param int $beginTime 查询开始时间
+     * @param int $endTime   查询结束时间
+     * @param string $uids   用户uid单个或者多个
+     * @return array
+     */
+    public function getCreditList($param){
+        $where   = [];
+        $where[] = '`crid`=' . $param['crid'];
+        $where[] = '`del`=0';
+        if (isset($param['beginTime']) && $param['beginTime'] > 0)
+            $where[] = '(`dateline` >=' . $param['beginTime'] . ' AND `dateline`<=' . $param['endTime'] . ')'; //优先执行时间条件
+        //学生人数大于1000个取出所有的进行筛选
+        $uidArr = explode(',', $param['uids']);
+        $count  = count($uidArr);
+        if ($count <= 1000) {
+            $where[] = '`uid` IN(' . $param['uids'] . ')';
+        }
+        $filed = [
+            '`uid`',
+            ' SUM(`score`) `score`',
+        ];
+        $sql   = 'SELECT ' . implode(',', $filed) . ' FROM `ebh_studycreditlogs`';
+        $sql   .= ' WHERE ' . implode(' AND ', $where);
+        $sql   .= ' GROUP BY `uid` ORDER BY NULL';
+        $lists = $this->db->query($sql)->list_array('uid');
+        log_message('获取学分' . $sql);
+        //结果数据中有多余的数据进行筛选
+        if ($count < count($lists)) {
+            //计算多余数据
+            $unsetArr = array_diff(array_keys($lists), $uidArr);
+            if (!empty($unsetArr)) {
+                foreach ($unsetArr as $uid) {
+                    unset($lists[$uid]);
+                }
+            }
+        }
+        return $lists;
+    }
 }

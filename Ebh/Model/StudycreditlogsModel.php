@@ -495,7 +495,7 @@ class StudycreditlogsModel{
         $sql   .= ' WHERE ' . implode(' AND ', $where);
         $sql   .= ' GROUP BY `uid` ORDER BY NULL';
         $lists = $this->db->query($sql)->list_array('uid');
-        log_message('获取学分' . $sql);
+       // log_message('获取学分' . $sql);
         //结果数据中有多余的数据进行筛选
         if ($count < count($lists)) {
             //计算多余数据

@@ -264,6 +264,7 @@ class StudyModel
         $creditList  = $this->db->query($creditSql)->list_array('uid');
 
         foreach ($data as $uid => $item) {
+            $data[$uid]['countCredit']            = 0;
             $data[$uid]['cx']                     = isset($creditList[$uid]['cx']) && $creditList[$uid]['cx'] > 0 ? $creditList[$uid]['cx'] : 0;
             $data[$uid]['newlecture_comment']     = isset($creditList[$uid]['newlecture_comment']) && $creditList[$uid]['newlecture_comment'] > 0 ? $creditList[$uid]['newlecture_comment'] : 0;
             $data[$uid]['newlecture_credit']      = isset($creditList[$uid]['newlecture_credit']) && $creditList[$uid]['newlecture_credit'] > 0 ? $creditList[$uid]['newlecture_credit'] : 0;

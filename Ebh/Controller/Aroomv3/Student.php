@@ -397,7 +397,7 @@ class StudentController extends Controller{
         $list = Ebh()->cache->get($cacheKey);
 
         if (is_array($list)) {
-            //return $list;
+            return $list;
         }
 
 
@@ -432,7 +432,7 @@ class StudentController extends Controller{
         $cacheKey                 = implodeKey($params);
         $list                     = Ebh()->cache->get($cacheKey);
         if (is_array($list)) {
-           // return $list;
+            return $list;
         }
         $list = $model->outExclgetCreditCount($params);
        Ebh()->cache->set($cacheKey, $list, 300);
@@ -455,9 +455,9 @@ class StudentController extends Controller{
         $beginTime = intval($this->beginTime);
         $endTime   = intval($this->endTime);
         //验证uid的数据是否合法
-        if (!preg_match('/^((\d,?)*)\d$/', $uids)) {
-            return false;
-        }
+//        if (!preg_match('/^((\d,?)*)\d$/', $uids)) {
+//            return false;
+//        }
         $param              = [];
         $param['crid']      = $crid;
         $param['uids']      = $uids;

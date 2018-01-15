@@ -439,7 +439,7 @@ class StudycreditlogsModel{
      * @Author:tzq
      * @Date:2018/01/09
      * @param string $sql 要更新的sql语句
-     * @return bool
+     * @return int
      */
     public function updateFolderid($folderList){
         $sql = 'UPDATE `ebh_studycreditlogs` SET `folderid`= CASE  ';

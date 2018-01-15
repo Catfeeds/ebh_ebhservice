@@ -196,4 +196,6 @@ class CourseModel{
 
         return array('progress'=>$progress,'rate'=>$rate);
     }
+
+
 }

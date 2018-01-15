@@ -136,6 +136,9 @@ class RoomUserModel{
         if (!empty($param['classid'])){
             $filterClass = true;
             $wheres[]= '`e`.`classid` = '.$param['classid'];
+        } else if (!empty($param['classids'])) {
+            $filterClass = true;
+            $wheres[] = '`e`.`classid` IN('.implode(',', $param['classids']).')';
         }
         if (!empty($param['lft']) && !empty($param['rgt'])) {
             $filterClass = true;
@@ -213,6 +216,9 @@ class RoomUserModel{
         $filterClass = false;
         if (!empty($param['classid'])) {
             $wheres[] = '`e`.`classid`='.intval($param['classid']);
+            $filterClass = true;
+        } else if (!empty($param['classids'])) {
+            $wheres[] = '`e`.`classid` IN('.implode(',', $param['classids']).')';
             $filterClass = true;
         }
         if (!empty($param['lft']) && !empty($param['rgt'])) {
@@ -300,8 +306,10 @@ class RoomUserModel{
         if (!empty($param['q'])){
             $wherearr[] = ' (u.username like \'%' . Ebh()->db->escape_str($param['q']) . '%\' or u.realname like \'%' . Ebh()->db->escape_str($param['q']) . '%\')';
         }
-
-        if(!empty($param['classid'])){
+        if (isset($param['lft']) && isset($param['rgt'])) {
+            $wherearr[] = 'cl.lft>='.$param['lft'];
+            $wherearr[] = 'cl.rgt<='.$param['rgt'];
+        } else if(!empty($param['classid'])){
             if (!empty($param['isenterprise'])) {
                 $root = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$param['classid'])->row_array();
                 if (empty($root)) {
@@ -312,6 +320,8 @@ class RoomUserModel{
             } else {
                 $wherearr[] = 'cl.classid='.$param['classid'];
             }
+        } else if (!empty($param['classids'])) {
+            $wherearr[] = 'cl.classid in('.implode(',', $param['classids']).')';
         }
         if (!empty($param['isenterprise'])) {
             $wherearr[] = 'cl.category=0';
@@ -366,7 +376,10 @@ class RoomUserModel{
             $wherearr[] = ' (u.username like \'%' . Ebh()->db->escape_str($param['q']) . '%\' or u.realname like \'%' . Ebh()->db->escape_str($param['q']) . '%\')';
         }
 
-        if(!empty($param['classid'])){
+        if (isset($param['lft']) && isset($param['rgt'])) {
+            $wherearr[] = 'cl.lft>='.$param['lft'];
+            $wherearr[] = 'cl.rgt<='.$param['rgt'];
+        } else if(!empty($param['classid'])){
             if (!empty($param['isenterprise'])) {
                 $root = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.intval($param['classid']))->row_array();
                 if (empty($root)) {
@@ -377,6 +390,8 @@ class RoomUserModel{
             } else {
                 $wherearr[] = 'cl.classid='.$param['classid'];
             }
+        } else if (!empty($param['classids'])) {
+            $wherearr[] = 'cl.classid in('.implode(',', $param['classids']).')';
         }
         if (!empty($param['isenterprise'])) {
             $wherearr[] = 'cl.category=0';

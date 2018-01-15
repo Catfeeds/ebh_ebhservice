@@ -174,45 +174,45 @@ class AskQuestionModel {
      */
     public function getList($crid, $filters, $limits = 20, $setKey = false) {
         $fieldArr = array(
-            '`qid`',
-            '`folderid`',
-            '`uid`',
-            '`title`',
-            '`message`',
-            '`audioname`',
-            '`audiosrc`',
-            '`imagename`',
-            '`imagesrc`',
-            '`answercount`',
-            '`status`',
-            '`dateline`',
-            '`viewnum`',
-            '`shield`',
-            '`cwid`',
-            '`cwname`',
-            '`audiotime`'
+            '`a`.`qid`',
+            '`a`.`folderid`',
+            '`a`.`uid`',
+            '`a`.`title`',
+            '`a`.`message`',
+            '`a`.`audioname`',
+            '`a`.`audiosrc`',
+            '`a`.`imagename`',
+            '`a`.`imagesrc`',
+            '`a`.`answercount`',
+            '`a`.`status`',
+            '`a`.`dateline`',
+            '`a`.`viewnum`',
+            '`a`.`shield`',
+            '`a`.`cwid`',
+            '`a`.`cwname`',
+            '`a`.`audiotime`'
         );
         $whereArr = array(
-            '`crid`='.intval($crid)
+            '`a`.`crid`='.intval($crid)
         );
         if (isset($filters['folderid'])) {
-            $whereArr[] = '`folderid`='.intval($filters['folderid']);
+            $whereArr[] = '`a`.`folderid`='.intval($filters['folderid']);
         }
         if (isset($filters['cwid'])) {
-            $whereArr[] = '`cwid`='.intval($filters['cwid']);
+            $whereArr[] = '`a`.`cwid`='.intval($filters['cwid']);
         }
         if (isset($filters['shield'])) {
             $shield = intval($filters['shield']);
-            $whereArr[] = '`shield`='.($shield > 0 ? 1 : 0);
+            $whereArr[] = '`a`.`shield`='.($shield > 0 ? 1 : 0);
         }
         if (isset($filters['early'])) {
-            $whereArr[] = '`dateline`>='.intval($filters['early']);
+            $whereArr[] = '`a`.`dateline`>='.intval($filters['early']);
         }
         if (isset($filters['latest'])) {
-            $whereArr[] = '`dateline`<='.intval($filters['latest']);
+            $whereArr[] = '`a`.`dateline`<='.intval($filters['latest']);
         }
         if (!empty($filters['k'])) {
-            $whereArr[] = '`title` LIKE '.Ebh()->db->escape('%'.$filters['k'].'%');
+            $whereArr[] = '`a`.`title` LIKE '.Ebh()->db->escape('%'.$filters['k'].'%');
         }
         $offset = 0;
         $pagesize = 20;
@@ -230,8 +230,25 @@ class AskQuestionModel {
                 $pagesize = max(1, intval($limits));
             }
         }
-        $sql = 'SELECT '.implode(',', $fieldArr).' FROM `ebh_askquestions` WHERE '.
-            implode(' AND ', $whereArr).' ORDER BY `qid` DESC LIMIT '.$offset.','.$pagesize ;
+        if (!empty($filters['classids'])) {
+            if (isset($filters['roomtype']) && $filters['roomtype'] == 'com' && count($filters['classids']) == 1) {
+                $classid = reset($filters['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return array();
+                }
+                $whereArr[] = '`c`.`lft`>='.$class['lft'];
+                $whereArr[] = '`c`.`rgt`<='.$class['rgt'];
+            } else {
+                $whereArr[] = '`b`.`classid` IN('.implode(',', $filters['classids']).')';
+            }
+
+            $sql = 'SELECT '.implode(',', $fieldArr).' FROM `ebh_askquestions` `a` JOIN `ebh_classstudents` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`b`.`classid` AND `c`.`crid`=`a`.`crid` WHERE '.
+                implode(' AND ', $whereArr).' ORDER BY `a`.`qid` DESC LIMIT '.$offset.','.$pagesize ;
+        } else {
+            $sql = 'SELECT '.implode(',', $fieldArr).' FROM `ebh_askquestions` `a` WHERE '.
+                implode(' AND ', $whereArr).' ORDER BY `a`.`qid` DESC LIMIT '.$offset.','.$pagesize ;
+        }
         if (!$setKey) {
             return Ebh()->db->query($sql)->list_array();
         }
@@ -278,8 +295,25 @@ class AskQuestionModel {
             //自己的
             $whereArr[] = '`uid`='.intval($filters['uid']);
         }
-
-        $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_askquestions` WHERE '.implode(' AND ', $whereArr);
+        if (isset($filters['classids'])) {
+            $whereArr = array_map(function($where) {
+                return '`a`.'.$where;
+            }, $whereArr);
+            if (isset($filters['roomtype']) && $filters['roomtype'] == 'com' && count($filters['classids']) == 1) {
+                $classid = reset($filters['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return 0;
+                }
+                $whereArr[] = '`c`.`lft`>='.$class['lft'];
+                $whereArr[] = '`c`.`rgt`<='.$class['rgt'];
+            } else {
+                $whereArr[] = '`b`.`classid` IN('.implode(',', $filters['classids']).')';
+            }
+            $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_askquestions` `a` JOIN `ebh_classstudents` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`b`.`classid` AND `c`.`crid`=`a`.`crid` WHERE '.implode(' AND ', $whereArr);
+        } else {
+            $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_askquestions` WHERE '.implode(' AND ', $whereArr);
+        }
         $ret = Ebh()->db->query($sql)->row_array();
         if (!empty($ret)) {
             return $ret['c'];

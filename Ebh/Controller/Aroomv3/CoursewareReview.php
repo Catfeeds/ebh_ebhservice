@@ -48,6 +48,21 @@ class CoursewareReviewController extends Controller {
                 'audit' => array(
                     'name' => 'audit',
                     'type' => 'int'
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'roomtype' => array(
+                    'name' => 'roomtype',
+                    'type' => 'string',
+                    'default' => 'edu'
+                ),
+                'classid' => array(
+                    'name' => 'classid',
+                    'type' => 'int',
+                    'default' => 0
                 )
             ),
             //课程评论统计
@@ -76,6 +91,21 @@ class CoursewareReviewController extends Controller {
                 'audit' => array(
                     'name' => 'audit',
                     'type' => 'int'
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'roomtype' => array(
+                    'name' => 'roomtype',
+                    'type' => 'string',
+                    'default' => 'edu'
+                ),
+                'classid' => array(
+                    'name' => 'classid',
+                    'type' => 'int',
+                    'default' => 0
                 )
             ),
             //屏蔽评论
@@ -121,6 +151,38 @@ class CoursewareReviewController extends Controller {
      * @return int
      */
     public function coursewareReviewCountAction() {
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return 0;
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return 0;
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return 0;
+                }
+            }
+        }
         $model = new ReviewModel();
         $filters = array();
         if ($this->early !== NULL) {
@@ -137,6 +199,21 @@ class CoursewareReviewController extends Controller {
         }
         if ($this->audit !== NULL && $this->audit !== '') {
             $filters['audit'] = $this->audit;
+        }
+        if (!empty($classes)) {
+            $filters['classids'] = array_column($classes, 'classid');
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $filters['classids'])) {
+                    $filters['classids'] = array($this->classid);
+                } else {
+                    return 0;
+                }
+            }
+            $filters['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $filters['roomtype'] = $this->roomtype;
+            $filters['classids'] = array($this->classid);
         }
         return $model->getCourseReviewCount($this->crid, $filters);
     }
@@ -146,8 +223,41 @@ class CoursewareReviewController extends Controller {
      * @return mixed
      */
     public function coursewareReviewListAction() {
-        $model = new ReviewModel();
         $filters = array();
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array();
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return array();
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return array();
+                }
+            }
+
+        }
+        $model = new ReviewModel();
         if ($this->early !== NULL) {
             $filters['early'] = $this->early;
         }
@@ -162,6 +272,21 @@ class CoursewareReviewController extends Controller {
         }
         if ($this->audit !== NULL && $this->audit !== '') {
             $filters['audit'] = $this->audit;
+        }
+        if (!empty($classes)) {
+            $filters['classids'] = array_column($classes, 'classid');
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $filters['classids'])) {
+                    $filters['classids'] = array($this->classid);
+                } else {
+                    return array();
+                }
+            }
+            $filters['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $filters['roomtype'] = $this->roomtype;
+            $filters['classids'] = array($this->classid);
         }
         $limits = array();
         if ($this->pagesize !== NULL) {

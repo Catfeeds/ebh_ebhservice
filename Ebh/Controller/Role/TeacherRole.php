@@ -67,6 +67,11 @@ class TeacherRoleController extends Controller {
                     'name' => 'permissions',
                     'type' => 'array',
                     'default' => array()
+                ),
+                'limitscope' => array(
+                    'name' => 'limitscope',
+                    'type' => 'boolean',
+                    'default' => false
                 )
             ),
             //角色详情
@@ -224,6 +229,7 @@ class TeacherRoleController extends Controller {
                 'rolename' => $this->rolename,
                 'category' => intval($this->category),
                 'remark' => $this->remark,
+                'limitscope' => intval($this->limitscope),
                 'permissions' => $this->permissions
             ));
         } else {
@@ -231,6 +237,7 @@ class TeacherRoleController extends Controller {
                 'rolename' => $this->rolename,
                 'category' => intval($this->category),
                 'remark' => $this->remark,
+                'limitscope' => intval($this->limitscope),
                 'permissions' => $this->permissions
             ));
             if ($newid > 0) {
@@ -327,7 +334,6 @@ class TeacherRoleController extends Controller {
             'crid' => $this->crid,
             'roomtype' => $this->roomtype
         );
-Ebh()->log->info($this->roomtype);
         $model = new MenuModel();
         $ret = $model->getMenuList($params);
         //过滤隐藏的菜单,角色管理菜单

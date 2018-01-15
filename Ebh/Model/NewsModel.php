@@ -249,8 +249,27 @@ class NewsModel {
         if (isset($filterParams['q'])) {
             $params[] = '`subject` LIKE '.Ebh()->db->escape('%'.$filterParams['q'].'%');
         }
-        $sql = 'SELECT `itemid`,`status`,`message`,`uid`,`crid`,`navcode`,`subject`,`note`,`thumb`,`viewnum`,`displayorder`,`dateline` FROM `ebh_news`';
-        $countsql = 'SELECT count(1) as c FROM `ebh_news`';
+        if (isset($filterParams['classids']) && isset($filterParams['type']) && $filterParams['type'] == 1) {
+            $params = array_map(function($param) {
+                return '`a`.'.$param;
+            }, $params);
+            if (isset($filterParams['roomtype']) && $filterParams['roomtype'] == 'com' && count($filterParams['classids']) == 1) {
+                $classid = reset($filterParams['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return array('list' => array(), 'totalpage' => 0);
+                }
+                $params[] = '`c`.`lft`>='.$class['lft'];
+                $params[] = '`c`.`rgt`<='.$class['rgt'];
+            } else {
+                $params[] = '`c`.`classid` IN('.implode(',', $filterParams['classids']).')';
+            }
+            $sql = 'SELECT `a`.`itemid`,`a`.`status`,`a`.`message`,`a`.`uid`,`a`.`crid`,`a`.`navcode`,`a`.`subject`,`a`.`note`,`a`.`thumb`,`a`.`viewnum`,`a`.`displayorder`,`a`.`dateline` FROM `ebh_news` `a` JOIN `ebh_classstudents` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`b`.`classid` AND `c`.`crid`=`a`.`crid`';
+            $countsql = 'SELECT count(1) as c FROM `ebh_news` `a` JOIN `ebh_classstudents` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`b`.`classid` AND `c`.`crid`=`a`.`crid`';
+        } else {
+            $sql = 'SELECT `itemid`,`status`,`message`,`uid`,`crid`,`navcode`,`subject`,`note`,`thumb`,`viewnum`,`displayorder`,`dateline` FROM `ebh_news`';
+            $countsql = 'SELECT count(1) as c FROM `ebh_news`';
+        }
         if (!empty($params)) {
             $sql .= ' WHERE '.implode(' AND ', $params);
             $countsql .= ' WHERE '.implode(' AND ', $params);
@@ -406,12 +425,36 @@ class NewsModel {
         if (isset($filterParams['q'])) {
             $params[] = '`r`.`comment` LIKE '.Ebh()->db->escape('%'.$filterParams['q'].'%');
         }
-        $sql = 'SELECT `r`.`rwid`,`r`.`status`,`r`.`uid`,`r`.`itemid`,`r`.`comment`,`r`.`dateline` as `rdateline`,`a`.`subject`,`a`.`uid` as `auid` ,`a`.`viewnum`,`a`.`itemid`,`a`.`dateline` FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+        if (isset($filterParams['classids'])) {
+            if (isset($filterParams['roomtype']) && $filterParams['roomtype'] == 'com' && count($filterParams['classids']) == 1) {
+                $classid = reset($filterParams['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return array('list' => array(), 'totalpage' => 0);
+                }
+                $params[] = '`c`.`lft`>='.$class['lft'];
+                $params[] = '`c`.`rgt`<='.$class['rgt'];
+            } else {
+                $params[] = '`cs`.`classid` IN('.implode(',', $filterParams['classids']).')';
+            }
+
+            $sql = 'SELECT `r`.`rwid`,`r`.`status`,`r`.`uid`,`r`.`itemid`,`r`.`comment`,`r`.`dateline` as `rdateline`,`a`.`subject`,`a`.`uid` as `auid` ,`a`.`viewnum`,`a`.`itemid`,`a`.`dateline` FROM `ebh_news_reviews` `r` JOIN `ebh_classstudents` `cs` ON `cs`.`uid`=`r`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`cs`.`classid` AND `c`.`crid`=`r`.`crid` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+        } else {
+            $sql = 'SELECT `r`.`rwid`,`r`.`status`,`r`.`uid`,`r`.`itemid`,`r`.`comment`,`r`.`dateline` as `rdateline`,`a`.`subject`,`a`.`uid` as `auid` ,`a`.`viewnum`,`a`.`itemid`,`a`.`dateline` FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+        }
 
          if (!isset($filterParams['articleid']) && empty($filterParams['allreviews'])) {//有articleid说明，单个文章下所有评论，不去重
-            $countsql = 'SELECT count(distinct `r`.`itemid`) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+             if (isset($filterParams['classids'])) {
+                 $countsql = 'SELECT count(distinct `r`.`itemid`) as c FROM `ebh_news_reviews` `r` JOIN `ebh_classstudents` `cs` ON `cs`.`uid`=`r`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`cs`.`classid` and `c`.`crid`=`r`.`crid` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+             } else {
+                 $countsql = 'SELECT count(distinct `r`.`itemid`) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+             }
          } else {
-              $countsql = 'SELECT count(1) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+              if (isset($filterParams['classids'])) {
+                  $countsql = 'SELECT count(1) as c FROM `ebh_news_reviews` `r` JOIN `ebh_classstudents` `cs` ON `cs`.`uid`=`r`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`cs`.`classid` AND `c`.`crid`=`r`.`crid` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+              } else {
+                  $countsql = 'SELECT count(1) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+              }
          }
         if (!empty($params)) {
             $sql .= ' WHERE '.implode(' AND ', $params);

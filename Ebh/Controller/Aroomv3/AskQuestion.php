@@ -47,6 +47,21 @@ class AskQuestionController extends Controller {
                 'k' => array(
                     'name' => 'k',
                     'type' => 'string'
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'classid' => array(
+                    'name' => 'classid',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'roomtype' => array(
+                    'name' => 'roomtype',
+                    'type' => 'string',
+                    'default' => 'edu'
                 )
             ),
             //问题统计
@@ -75,6 +90,21 @@ class AskQuestionController extends Controller {
                 'k' => array(
                     'name' => 'k',
                     'type' => 'string'
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'classid' => array(
+                    'name' => 'classid',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'roomtype' => array(
+                    'name' => 'roomtype',
+                    'type' => 'string',
+                    'default' => 'edu'
                 )
             ),
             //设置屏蔽状态
@@ -128,12 +158,59 @@ class AskQuestionController extends Controller {
         if (!empty($this->k)) {
             $filters['k'] = $this->k;
         }
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array();
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return array();
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return array();
+                }
+            }
+        }
         $limits = array();
         if ($this->pagesize !== NULL) {
             $limits['pagesize'] = $this->pagesize;
         }
         if ($this->pagenum !== NULL) {
             $limits['page'] = $this->pagenum;
+        }
+        if (!empty($classes)) {
+            $filters['classids'] = array_column($classes, 'classid');
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $filters['classids'])) {
+                    $filters['classids'] = array($this->classid);
+                } else {
+                    return array();
+                }
+            }
+            $filters['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $filters['roomtype'] = $this->roomtype;
+            $filters['classids'] = array($this->classid);
         }
         $ret = $model->getList($this->crid, $filters, $limits);
         if (!empty($ret)) {
@@ -185,6 +262,38 @@ class AskQuestionController extends Controller {
      * 问题统计
      */
     public function askQuestionCountAction() {
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return 0;
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return 0;
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return 0;
+                }
+            }
+        }
         $model = new AskQuestionModel();
         $filters = array();
         if ($this->early !== NULL) {
@@ -201,6 +310,21 @@ class AskQuestionController extends Controller {
         }
         if (!empty($this->k)) {
             $filters['k'] = $this->k;
+        }
+        if (!empty($classes)) {
+            $filters['classids'] = array_column($classes, 'classid');
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $filters['classids'])) {
+                    $filters['classids'] = array($this->classid);
+                } else {
+                    return 0;
+                }
+            }
+            $filters['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $filters['roomtype'] = $this->roomtype;
+            $filters['classids'] = array($this->classid);
         }
         return $model->getCount($this->crid, $filters);
     }

@@ -22,6 +22,7 @@ class ClassesController extends Controller{
                 'q'  =>  array('name'=>'q','default'=>''),
                 'roomType' => array('name'=>'roomType', 'type'=>'string','default'=>'edu'),
                 'pagesize'  =>  array('name'=>'pagesize','type'=>'int','default'=>getConfig('system.page.listRows')),
+                'uid' => array('name' => 'uid', 'type' => 'int', 'default' => 0)
             ),
             'editAction'   =>  array(
                 'classid'  =>  array('name'=>'classid','require'=>true,'type'=>'int'),
@@ -114,6 +115,36 @@ class ClassesController extends Controller{
         }
         $parameters['crid'] = $this->crid;
         $parameters['roomType'] = $this->roomType;
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array(
+                    'total' =>  0,
+                    'list'  =>  array(),
+                    'nowPage'   =>  0,
+                    'totalPage' =>  0
+                );
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                if (empty($classes)) {
+                    return array(
+                        'total' =>  0,
+                        'list'  =>  array(),
+                        'nowPage'   =>  0,
+                        'totalPage' =>  0);
+                }
+            }
+        }
+        if (!empty($classes)) {
+            $parameters['classids'] = array_keys($classes);
+            unset($classes);
+        }
         $total = $this->classesModel->getCount($parameters);
         $pageClass  = new Page($total,$this->pagesize);
         if ($this->roomType == 'edu') {

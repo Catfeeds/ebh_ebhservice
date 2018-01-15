@@ -26,7 +26,10 @@ class MyarticleController extends Controller{
                 'pagesize'  =>  array('name'=>'pagesize','type'=>'int','default'=>getConfig('system.page.listRows')),
                 'early' => array('name' => 'early','type' => 'int' ),
                 'latest' => array('name' => 'latest','type' => 'int'),
-                'page'  =>  array('name'=>'page','type'=>'int','default'=>0)
+                'page'  =>  array('name'=>'page','type'=>'int','default'=>0),
+                'adminuid' => array('name' => 'adminuid', 'type' => 'int', 'default' => 0),
+                'roomtype' => array('name' => 'roomtype', 'type' => 'string', 'default' => 'edu'),
+                'classid' => array('name' => 'classid', 'type' => 'int', 'default' => 0)
             ),
             'detailAction'   =>  array(
                 'status'  =>  array('name'=>'status','type'=>'int','default'=>1),
@@ -57,7 +60,10 @@ class MyarticleController extends Controller{
                 'latest' => array('name' => 'latest','type' => 'int'),
                 'pagesize'  =>  array('name'=>'pagesize','type'=>'int','default'=>getConfig('system.page.listRows')),
                 'page'  =>  array('name'=>'page','type'=>'int','default'=>0),
-                'count'  =>  array('name'=>'count','type'=>'int','default'=>1)//需要统计字段
+                'count'  =>  array('name'=>'count','type'=>'int','default'=>1),//需要统计字段
+                'adminuid' => array('name' => 'adminuid', 'type' => 'int', 'default' => 0),
+                'roomtype' => array('name' => 'roomtype', 'type' => 'string', 'default' => 'edu'),
+                'classid' => array('name' => 'classid', 'type' => 'int', 'default' => 0)
             ),
             'delAction'   =>  array(
                 'itemid'  =>  array('name'=>'itemid','require'=>true,'type'=>'int')
@@ -168,6 +174,53 @@ class MyarticleController extends Controller{
     public function getReviewsAction(){
         $parameters = array();
         $parameters['crid'] = $this->crid;
+        if ($this->adminuid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->adminuid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array('totalpage' => 0, 'list' => array());
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->adminuid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return array('totalpage' => 0, 'list' => array());
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->adminuid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return array('totalpage' => 0, 'list' => array());
+                }
+            }
+        }
+        if (!empty($classes)) {
+            $parameters['classids'] = array_column($classes, 'classid');
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $parameters['classids'])) {
+                    $parameters['classids'] = array($this->classid);
+                } else {
+                    return array('totalpage' => 0, 'list' => array());
+                }
+            }
+            $parameters['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $parameters['roomtype'] = $this->roomtype;
+            $parameters['classids'] = array($this->classid);
+        }
         if ($this->articleid) {
             $parameters['articleid'] = $this->articleid;
         }
@@ -236,6 +289,53 @@ class MyarticleController extends Controller{
     public function listAction(){
         $filterParams = array();
         $filterParams['crid'] = $this->crid;
+        if ($this->adminuid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->adminuid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array('totalpage' => 0, 'list' => array());
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->adminuid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return array('totalpage' => 0, 'list' => array());
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->adminuid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return array('totalpage' => 0, 'list' => array());
+                }
+            }
+        }
+        if (!empty($classes)) {
+            $filterParams['classids'] = array_column($classes, 'classid');
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $filterParams['classids'])) {
+                    $filterParams['classids'] = array($this->classid);
+                } else {
+                    return array('totalpage' => 0, 'list' => array());
+                }
+            }
+            $filterParams['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $filterParams['classids'] = array($this->classid);
+            $filterParams['roomtype'] = $this->roomtype;
+        }
         if ($this->uid) {
             $filterParams['uid'] = $this->uid;
         }

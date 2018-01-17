@@ -14,12 +14,28 @@ class NoticeController extends Controller{
                 'pagesize'  =>  array('name'=>'pagesize','type'=>'int','default'=>getConfig('system.page.listRows')),
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int'),
             ),
+            'detailAction'   =>  array(
+                'noticeid'  =>  array('name'=>'noticeid','require'=>true,'type'=>'int'),
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
+            ),
             'addViewNumAction'   =>  array(
                 'noticeid'  =>  array('name'=>'noticeid','require'=>true,'type'=>'int'),
             ),
         );
     }
 
+    /**
+     * 获取通知详情
+     * @return array
+     */
+    public function detailAction(){
+        $noticeModel = new NoticeModel();
+        $detail = $noticeModel->getModel($this->noticeid,$this->crid);
+        if(!$detail){
+            return returnData(0,'通知不存在');
+        }
+        return returnData(1,'',$detail);
+    }
     /**
      * 获取网校通知
      * @return array

@@ -277,6 +277,14 @@ class RoomController extends Controller
                 'isbanregister' => array(
                     'name' => 'isbanregister',
                     'type' => 'int'
+                ),
+                'isbanthirdlogin' => array(
+                    'name' => 'isbanthirdlogin',
+                    'type' => 'int'
+                ),
+                'isdepartment' => array(
+                    'name' => 'isdepartment',
+                    'type' => 'int'
                 )
             ),
             //登录限制
@@ -1050,6 +1058,12 @@ class RoomController extends Controller
         }
         if ($this->isbanregister !== NULL) {
             $params['isbanregister'] = min(1, max(0, $this->isbanregister));
+        }
+        if ($this->isbanthirdlogin !== NULL) {
+            $params['isbanthirdlogin'] = min(1, max(0, $this->isbanthirdlogin));
+        }
+        if ($this->isdepartment !== NULL) {
+            $params['isdepartment'] = min(1, max(0, $this->isdepartment));
         }
         if ($model->exists($this->crid)) {
             return $model->update($this->crid, $params);

@@ -8,7 +8,7 @@ class SectionModel{
 		return $sid;
 	}
 	public function getSections($param = array()) {
-		$sql = 'select s.sid,s.sname from ebh_sections s ';
+		$sql = 'select s.sid,s.sname,s.displayorder from ebh_sections s ';
 		$wherearr = array();
 		if(!empty($param['folderid'])) 
 			$wherearr[] = 's.folderid='.$param['folderid'];
@@ -44,6 +44,10 @@ class SectionModel{
 			return FALSE;
 		return Ebh()->db->delete('ebh_sections',$wherearr);
 	}
+	
+	/*
+	 *章节上下移
+	*/
 	public function changeOrder($param) {
 		$sid = $param['sid'];
 		$crid = $param['crid'];
@@ -73,5 +77,30 @@ class SectionModel{
 		return TRUE;
 	}
 	
+	/*
+	 * 直接修改排序号
+	*/
+	public function updateOrder($param){
+		$sid = $param['sid'];
+		$crid = $param['crid'];
+		$displayorder = $param['displayorder'];
+		$sql = "select folderid,displayorder from ebh_sections where sid=$sid AND crid=$crid";
+		$section = Ebh()->db->query($sql)->row_array();
+		if(empty($section)){
+			return FALSE;
+		}
+		if($section['displayorder'] == $displayorder){//排序号不变直接返回true
+			return TRUE;
+		}
+		//更新排序号，如果已有这个序号的，则对调
+		$folderid = $section['folderid'];
+		$sql = "select sid,displayorder from ebh_sections where folderid=$folderid AND crid=$crid AND displayorder=$displayorder";
+		$oldsection = Ebh()->db->query($sql)->row_array();
+		Ebh()->db->update('ebh_sections',array('displayorder'=>$displayorder),array('sid'=>$sid));
+		if(!empty($oldsection)){
+			Ebh()->db->update('ebh_sections',array('displayorder'=>$section['displayorder']),array('sid'=>$oldsection['sid']));
+		}
+		return TRUE;
+	}
 
 }

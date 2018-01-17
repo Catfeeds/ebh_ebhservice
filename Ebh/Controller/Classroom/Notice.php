@@ -30,7 +30,9 @@ class NoticeController extends Controller{
      */
     public function detailAction(){
         $noticeModel = new NoticeModel();
-        $detail = $noticeModel->getModel($this->noticeid,$this->crid);
+        $parameters['noticeid'] = $this->noticeid;
+        $parameters['crid'] = $this->crid;
+        $detail = $noticeModel->getNoticeDetail($parameters);
         if(!$detail){
             return returnData(0,'通知不存在');
         }

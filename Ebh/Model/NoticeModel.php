@@ -177,6 +177,29 @@ class NoticeModel {
         return $count['count'];
     }
 
+    /**
+     * 获取通知详情
+     * @param $params
+     * @return mixed
+     */
+    public function getNoticeDetail($params){
+        $sql = 'select n.noticeid,n.uid,n.crid,n.title,n.message,n.viewnum,n.dateline,n.attid,u.realname,att.title as attname from ebh_notices n left join ebh_users u on u.uid=n.uid left join ebh_attachments att on att.attid=n.attid';
+        $wherearr = array();
+
+        if(!empty($params['crid']) ){
+            $wherearr[] = ' n.crid='.$params['crid'];
+        }
+        if(!empty($params['noticeid']) ){
+            $wherearr[] = ' n.noticeid='.$params['noticeid'];
+        }
+        if(!empty($wherearr)){
+            $sql.= ' where '.implode(' AND ',$wherearr);
+        }
+
+
+        return Ebh()->db->query($sql)->row_array();
+    }
+
     public function getNoticeList($crid,$params){
         $sql = 'select n.noticeid,n.uid,n.crid,n.title,n.message,n.viewnum,n.dateline,n.attid,u.realname,att.title as attname from ebh_notices n left join ebh_users u on u.uid=n.uid left join ebh_attachments att on att.attid=n.attid';
 

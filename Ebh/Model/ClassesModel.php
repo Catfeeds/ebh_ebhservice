@@ -40,6 +40,9 @@ class ClassesModel{
         if (isset($param['roomType']) && $param['roomType'] == 'edu') {
             $wherearr[] = 'c.category=0';
         }
+        if (isset($param['classids'])) {
+            $wherearr[] = 'c.classid in('.implode(',', $param['classids']).')';
+        }
 
         if(!empty($wherearr)){
             $sql .= ' WHERE '.implode(' AND ',$wherearr);
@@ -83,7 +86,9 @@ class ClassesModel{
         if (isset($param['roomType']) && $param['roomType'] == 'edu') {
             $wherearr[] = 'c.category=0';
         }
-
+        if (isset($param['classids'])) {
+            $wherearr[] = 'c.classid in('.implode(',', $param['classids']).')';
+        }
         if(!empty($wherearr)){
             $sql .= ' WHERE '.implode(' AND ',$wherearr);
         }
@@ -265,7 +270,10 @@ class ClassesModel{
                 join ebh_folders f on (f.folderid=cc.folderid)";
 
         $wherearr[] = 'c.crid='.$crid;
-        if(!empty($param['classid'])){
+        if (isset($param['lft']) && isset($param['rgt'])) {
+            $wherearr[] = 'c.lft>='.$param['lft'];
+            $wherearr[] = 'c.rgt<='.$param['rgt'];
+        } else if(!empty($param['classid'])){
             if (!empty($param['isenterprise'])) {
                 $root = $this->getDept($param['classid'], $crid);
                 if (empty($root)) {
@@ -276,6 +284,8 @@ class ClassesModel{
             } else {
                 $wherearr[] = 'c.classid='.$param['classid'];
             }
+        } else if (!empty($param['classids'])) {
+            $wherearr[] = 'c.classid in('.implode(',', $param['classids']).')';
         }
         if (!empty($param['isenterprise'])) {
             $wherearr[] = 'c.category=0';
@@ -329,7 +339,10 @@ class ClassesModel{
                 join ebh_folders f on (cc.folderid=f.folderid)";
 
         $wherearr[] = 'c.crid='.$crid;
-        if(!empty($param['classid'])){
+        if (isset($param['lft']) && isset($param['rgt'])) {
+            $wherearr[] = 'c.lft>='.$param['lft'];
+            $wherearr[] = 'c.rgt<='.$param['rgt'];
+        } else if(!empty($param['classid'])){
             if (!empty($param['isenterprise'])) {
                 $root = $this->getDept($param['classid'], $crid);
                 if (empty($root)) {
@@ -340,6 +353,8 @@ class ClassesModel{
             } else {
                 $wherearr[] = 'c.classid='.$param['classid'];
             }
+        } else if (!empty($param['classids'])) {
+            $wherearr[] = 'c.classid in('.implode(',',  $param['classids']).')';
         }
         if (!empty($param['isenterprise'])) {
             $wherearr[] = 'c.category=0';
@@ -387,14 +402,15 @@ class ClassesModel{
 
     /**
      * 添加部门
-     * @param $superiorId 上级部门ID
-     * @param $deptname 部门名称
-     * @param $crid 所属网校ID
+     * @param int $superiorId 上级部门ID
+     * @param string $deptname 部门名称
+     * @param string $code 部门编号
+     * @param int $crid 所属网校ID
      * @param int $displayorder 同级部门优先级，降序
      * @param int $stunum 部门编号
      * @return bool
      */
-    public function addDeptment($superiorId, $deptname, $crid, $displayorder = 0, &$stunum = 0) {
+    public function addDeptment($superiorId, $deptname, $code, $crid, $displayorder = 0, &$stunum = 0) {
         $crid = intval($crid);
         $superiorId = intval($superiorId);
         $superior = Ebh()->db->query(
@@ -404,18 +420,42 @@ class ClassesModel{
             return false;
         }
         $stunum = $superior['stunum'];
-        $brothers = Ebh()->db->query('SELECT `classid` FROM `ebh_classes` WHERE `superior`='.$superiorId.' AND `crid`='.
-            $crid.' AND `classname`='.Ebh()->db->escape($deptname))->row_array();
-        if (!empty($brothers['classid'])) {
-            //部门名称不能重复
-            return -1;
-        }
-        $maxCode = Ebh()->db->query('SELECT MAX(`code`) AS `code` FROM `ebh_classes` WHERE `crid`='.$crid)->row_array();
-        if (!empty($maxCode['code'])) {
-            $code = intval($maxCode['code']) + 1;
+        $wheres = array(
+            '`crid`='.$crid
+        );
+        if ($code == '') {
+            $wheres[] = '`superior`='.$superiorId;
+            $wheres[] = '`classname`='.Ebh()->db->escape($deptname);
         } else {
-            $code = 10001;
+            $wheres[] = '(`classname`='.Ebh()->db->escape($deptname).' OR `code`='.Ebh()->db->escape($code).')';
         }
+        $brothers = Ebh()->db->query('SELECT `classid`,`classname`,`code`,`superior` FROM `ebh_classes` WHERE '.implode(' AND ', $wheres))->list_array();
+        if (!empty($brothers)) {
+            //部门名称/部门编号不能重复
+            foreach ($brothers as $brother) {
+                if ($code == $brother['code']) {
+                    return -2;
+                }
+                if ($brother['superior'] == $superiorId && $brother['classname'] == $deptname) {
+                    return -1;
+                }
+            }
+        }
+        if ($code == '') {
+            $maxCode = Ebh()->db->query('SELECT MAX(`code`) AS `code` FROM `ebh_classes` WHERE `crid`='.$crid)->row_array();
+            if (!empty($maxCode['code'])) {
+                $code = preg_replace_callback('/^([^\d]*?)(\d*)$/', function($matches) {
+                    if ($matches[2] == '') {
+                        return $matches[1].'0001';
+                    }
+                    $len = strlen($matches[2]);
+                    return $matches[1].str_pad(intval($matches[2]) + 1, $len, '0', STR_PAD_LEFT);
+                }, $maxCode['code']);
+            } else {
+                $code = 10001;
+            }
+        }
+
         $lft = intval($superior['rgt']);
         $rgt = $lft + 1;
         $params = array(
@@ -473,8 +513,8 @@ class ClassesModel{
 
     /**
      * 修改部门
-     * @param $classid 部门ID
-     * @param $crid 所属网校ID
+     * @param int $classid 部门ID
+     * @param int $crid 所属网校ID
      * @param $params
      * @return bool
      */
@@ -487,14 +527,16 @@ class ClassesModel{
         if (empty($superior)) {
             return false;
         }
-        if (isset($params['classname'])) {
-            $brothers = Ebh()->db->query('SELECT `classid`,`classname` FROM `ebh_classes` WHERE `superior`='.$superior['superior'].' AND `crid`='.
-                $crid)->list_array('classid');
+        if (isset($params['classname']) || isset($params['code'])) {
+            $brothers = Ebh()->db->query('SELECT `classid`,`classname`,`code`,`superior` FROM `ebh_classes` WHERE `crid`='.$crid)->list_array('classid');
             if (!empty($brothers)) {
                 unset($brothers[$classid]);
                 foreach ($brothers as $brother) {
-                    if ($brother['classname'] == $params['classname']) {
+                    if ($brother['superior'] == $superior['superior'] && $brother['classname'] == $params['classname']) {
                         return -1;
+                    }
+                    if ($brother['code'] == $params['code']) {
+                        return -2;
                     }
                 }
             }
@@ -510,6 +552,9 @@ class ClassesModel{
         }
         if (isset($params['displayorder'])) {
             $setArr['displayorder'] = intval($params['displayorder']);
+        }
+        if (isset($params['code'])) {
+            $setArr['code'] = $params['code'];
         }
         if (empty($root_path)) {
             //部门名称未更改，只需修改本部门数据
@@ -670,18 +715,19 @@ class ClassesModel{
         Ebh()->db->set_con(0);
         $crid = intval($crid);
         $whereArr = array(
-            '`crid`='.$crid
+            '`crid`='.$crid,
+            '`status`=0'
         );
-        $sql = 'SELECT `classid`,`classname`,`stunum`,`category`,`superior`,`code`,`lft`,`rgt`,`displayorder` FROM `ebh_classes` WHERE '.
-            implode(' AND ', $whereArr).' ORDER BY `classid` ASC';
+        $sql = 'SELECT `classid`,`classname`,`stunum`,`category`,`superior`,`code`,`lft`,`rgt`,`displayorder` FROM `ebh_classes` WHERE '.implode(' AND ', $whereArr).' ORDER BY `lft` ASC';
         return Ebh()->db->query($sql)->list_array($setKey ? 'classid' : '');
     }
 
     /**
      * 班级老师列表
      * @param $classids 班级ID
+     * @param int $uid 老师ID
      */
-    public function getTeachers($classids) {
+    public function getTeachers($classids, $uid = 0) {
         if (is_array($classids)) {
             $classids = array_map('intval', $classids);
         } else {
@@ -696,8 +742,14 @@ class ClassesModel{
             '`b`.`groupid`',
             '`b`.`face`'
         );
-        $sql = 'SELECT '.implode(',', $fields).' FROM `ebh_classteachers` `a` LEFT JOIN `ebh_users` `b` ON `a`.`uid`=`b`.`uid`'.
-            ' WHERE `a`.`classid` IN('.implode(',', $classids).')';
+        $wheres = array(
+            '`a`.`classid` IN('.implode(',', $classids).')'
+        );
+        if ($uid > 0) {
+            $wheres[] = '`a`.`uid`='.$uid;
+        }
+        $sql = 'SELECT '.implode(',', $fields).' FROM `ebh_classteachers` `a` JOIN `ebh_users` `b` ON `a`.`uid`=`b`.`uid`'.
+            ' WHERE '.implode(' AND ', $wheres);
         return Ebh()->db->query($sql)->list_array();
     }
 
@@ -710,128 +762,8 @@ class ClassesModel{
     public function getDept($classid, $crid) {
         $classid = intval($classid);
         $crid = intval($crid);
-        $sql = 'SELECT `classid`,`classname`,`lft`,`rgt`,`superior`,`category` FROM `ebh_classes` WHERE `classid`='.
-            $classid.' AND `crid`='.$crid;
+        $sql = 'SELECT `classid`,`classname`,`lft`,`rgt`,`superior`,`category` FROM `ebh_classes` WHERE `classid`='.$classid.' AND `crid`='.$crid;
         return Ebh()->db->query($sql)->row_array();
-    }
-
-    /**
-     * 部门重置树结构参数
-     * @param $crid
-     * @param $crname
-     * @return bool|mixed
-     */
-    public function resetDeptTree($crid, $crname) {
-        $crid = intval($crid);
-        $sql = 'SELECT `classid`,`classname`,`superior`,`category`,`path`,`lft`,`rgt`,`code` FROM `ebh_classes` WHERE `crid`='.
-            $crid.' ORDER BY `category` DESC,`classid` ASC';
-        $trees = Ebh()->db->query($sql)->list_array('classid');
-        if (empty($trees)) {
-            return $this->initDeptment($crid, $crname);
-        }
-        $rootid = null;
-        foreach ($trees as $tree) {
-            if ($tree['category'] == 1) {
-                $rootid = $tree['classid'];
-                //Ebh()->db->update('ebh_classes', array('superior' => 0,'classname'=>$crname), '`classid`='.$rootid);
-                break;
-            }
-        }
-        if (empty($rootid)) {
-            $rootid = $this->initDeptment($crid, $crname);
-            if (empty($rootid)) {
-                return false;
-            }
-            array_unshift($trees, array(
-                'classid' => $rootid,
-                'category' => 1,
-                'superior' => 0,
-                'classname' => $crname,
-                'path' => '/'.$crname,
-                'lft' => 1,
-                'rgt' => 2,
-                'code' => 0
-            ));
-            $rootid = 0;
-        } else {
-            $trees[$rootid]['superior'] = 0;
-            $trees[$rootid]['classname'] = $crname;
-            $trees[$rootid]['path'] = '/'.$crname;
-        }
-
-        $trees[$rootid]['lft'] = 1;
-        $trees[$rootid]['rgt'] = count($trees) * 2;
-        $item = array_pop($trees);
-        $code = 10001;
-        while (true) {
-            if (isset($trees[$item['superior']])) {
-                $item['superior'] = $trees[$item['superior']]['classid'];
-                $item['code'] = $code;
-                $trees[$item['superior']]['children'][] = $item;
-                if (!isset($trees[$item['superior']]['subCount'])) {
-                    $trees[$item['superior']]['subCount'] = 0;
-                }
-                $trees[$item['superior']]['subCount'] += 1 + (isset($item['subCount']) ? $item['subCount'] : 0);
-            } else if(isset($trees[$rootid])){
-                $item['superior'] = $trees[$rootid]['classid'];
-                $item['code'] = $code;
-                $trees[$rootid]['children'][] = $item;
-                if (!isset($trees[$rootid]['subCount'])) {
-                    $trees[$rootid]['subCount'] = 0;
-                }
-                $trees[$rootid]['subCount'] += 1 + (isset($item['subCount']) ? $item['subCount'] : 0);
-            } else {
-                return false;
-            }
-            $item['category'] = 0;
-            $code++;
-            if (count($trees) == 1) {
-                break;
-            }
-            $item = array_pop($trees);
-        }
-        $trees = reset($trees);
-        $trees = $this->countLrft($trees, 0, '');
-        if (!empty($trees)) {
-            foreach ($trees as $tree) {
-                Ebh()->db->update('ebh_classes', array(
-                    'superior' => $tree['superior'],
-                    'code' => $tree['code'],
-                    'path' => $tree['path'],
-                    'lft' => $tree['lft'],
-                    'rgt' => $tree['rgt']
-                ), '`classid`='.$tree['classid']);
-            }
-        }
-        return true;
-    }
-
-    /**
-     * 计算树结构左右值
-     * @param $ret
-     * @param $baseLft
-     * @return array
-     */
-    private function countLrft($ret, $baseLft, $path) {
-        $tmp = $ret;
-        $tmp['lft'] = $baseLft + 1;
-        $tmp['rgt'] = $tmp['lft'] + 1 + (!empty($tmp['subCount']) ? $tmp['subCount'] : 0) * 2;
-        $tmp['path'] = rtrim($path, '/').'/'.preg_replace('/\//', '', $tmp['classname']);
-        unset($tmp['children'], $tmp['subCount'], $tmp['category']);
-        $a[] = $tmp;
-        $subBase = $tmp['lft'];
-        if (!empty($ret['children'])) {
-            foreach ($ret['children'] as $child) {
-                $a = array_merge($a, $this->countLrft($child, $subBase, $tmp['path']));
-                if (!empty($child['subCount'])) {
-                    $subBase += 2 + $child['subCount'] * 2;
-                } else {
-                    $subBase += 2;
-                }
-            }
-        }
-
-        return $a;
     }
 
     /*
@@ -1242,9 +1174,97 @@ class ClassesModel{
             ' END,`superior`=CASE `classid`'.implode('', $superiors).
             ' END,`lft`=CASE `classid`'.implode('', $lfts).
             ' END,`rgt`=CASE `classid`'.implode('', $rgts).
-            ' END,`code`=CASE `classid`'.implode('', $codes).
+            //' END,`code`=CASE `classid`'.implode('', $codes).
             ' END,`path`=CASE `classid`'.implode('', $paths).
             ' END WHERE `classid` IN('.implode(',', $whens).') AND `crid`='.intval($crid);
         return Ebh()->db->query($sql, false);
+    }
+
+    /**
+     * 部门列表
+     * @param int $crid 网校ID
+     * @param string $deptName 部门名称
+     * @param mixed $limit 限量条件
+     * @return array
+     */
+    public function getDeptList($crid, $deptName = '', $limit = null) {
+        $wheres = array('`crid`='.$crid, '`status`=0', '`category`=0');
+        if ($deptName != '') {
+            $wheres[] = '`classname` LIKE '.Ebh()->db->escape('%'.$deptName.'%');
+        }
+        $sql = 'SELECT `classname` FROM `ebh_classes` WHERE '.implode(' AND ', $wheres).' ORDER BY `dateline` DESC,`code` ASC';
+        $offset = 0;
+        $top = 0;
+        if (!empty($limit)) {
+            if (is_array($limit)) {
+                $page = isset($limit['page']) ? intval($limit['page']) : 1;
+                $page = max(1, $page);
+                $pagesize = isset($limit['pagesize']) ? intval($limit['pagesize']) : 1;
+                $top = $pagesize = max(1, $pagesize);
+                $offset = ($page - 1) * $pagesize;
+            } else if (is_numeric($limit) && $limit > 0) {
+                $top = intval($limit);
+            }
+        }
+        if ($top > 0) {
+            $sql .= ' LIMIT '.$offset.','.$top;
+        }
+        $ret = Ebh()->db->query($sql)->list_field();
+        if (empty($ret)) {
+            return array();
+        }
+        return $ret;
+    }
+
+    /**
+     * 验证部门是否有效，有效返回部门ID
+     * @param string $deptName 部门名称
+     * @param string $code 部门编号
+     * @param int $crid 网校ID
+     * @return mixed
+     */
+    public function verify($deptName, $code, $crid) {
+        $wheres = array(
+            '`crid`='.$crid,
+            '`classname`='.Ebh()->db->escape($deptName),
+            '`code`='.Ebh()->db->escape($code),
+            '`category`=0',
+            '`status`=0'
+        );
+        $sql = 'SELECT `classid` FROM `ebh_classes` WHERE '.implode(' AND ', $wheres);
+        $ret = Ebh()->db->query($sql)->row_array();
+        if (empty($ret)) {
+            return false;
+        }
+        return $ret['classid'];
+    }
+
+    /**
+     * 获取顶级部门
+     * @param int $crid 网校ID
+     * @return mixed
+     */
+    public function getRootDept($crid) {
+        $wheres = array(
+            '`crid`='.$crid,
+            '`category`=1',
+            '`status`=0'
+        );
+        $sql = 'SELECT `classid`,`classname`,`category`,`superior`,`lft`,`rgt`,`code`,`path`,`stunum` FROM `ebh_classes` WHERE '.implode(' AND ', $wheres);
+        $ret = Ebh()->db->query($sql)->row_array();
+        if (empty($ret)) {
+            return array(
+                'classid' => -1,
+                'classname' => '顶级部门',
+                'category' => 1,
+                'superior' => 0,
+                'lft' => 1,
+                'rgt' => 2,
+                'code' => 0,
+                'path' => '/顶级部门',
+                'stunum' => 0
+            );
+        }
+        return $ret;
     }
 }

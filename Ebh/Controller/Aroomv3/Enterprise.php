@@ -196,6 +196,11 @@ class EnterpriseController extends Controller {
                     'require' => true,
                     'type' => 'string'
                 ),
+				'crid' => array(
+                    'name' => 'crid',
+                    'require' => true,
+                    'type' => 'string'
+                ),
             ),
 			//子部门
 			'subDepartmentAction' =>array(
@@ -601,7 +606,8 @@ class EnterpriseController extends Controller {
 	public function classCourseCountAction(){
 		$model = new ClasscourseModel();
         return $model->getFolderidCountByClassid(
-            $this->classids
+            $this->classids,
+			$this->crid
         );
 	}
 	

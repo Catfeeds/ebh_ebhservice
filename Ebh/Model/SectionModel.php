@@ -39,9 +39,14 @@ class SectionModel{
 			return FALSE;
 		return Ebh()->db->update('ebh_sections',$param,$wherearr);
 	}
+	/*
+	 * 删除章节
+	*/
 	public function del($wherearr = array()) {
 		if(empty($wherearr) || empty($wherearr['sid']))
 			return FALSE;
+		//将原来属于章节下的课件的sid置为0
+		Ebh()->db->update('ebh_roomcourses',array('sid'=>0),$wherearr);
 		return Ebh()->db->delete('ebh_sections',$wherearr);
 	}
 	

@@ -196,11 +196,6 @@ class EnterpriseController extends Controller {
                     'require' => true,
                     'type' => 'string'
                 ),
-				'crid' => array(
-                    'name' => 'crid',
-                    'require' => true,
-                    'type' => 'string'
-                ),
             ),
 			//子部门
 			'subDepartmentAction' =>array(
@@ -353,6 +348,25 @@ class EnterpriseController extends Controller {
                     'type' => 'string',
                     'require' => true
                 )
+            ),
+            'importDeptmentsAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                //上级部门ID
+                'superiorId' => array(
+                    'name' => 'superiorId',
+                    'require' => true,
+                    'type' => 'int'
+                ),
+                //批量部门数据
+                'deptments' => array(
+                    'name' => 'deptments',
+                    'require' => true,
+                    'type' => 'string'
+                )
             )
         );
     }
@@ -493,43 +507,6 @@ class EnterpriseController extends Controller {
     }
 
     /**
-     * 导入部门
-     */
-    public function importDeptmentsAction() {
-        $dis = array_filter($this->deptments, function($dept) {
-            return empty($dept['deptname']);
-        });
-        if (!empty($dis)) {
-            return false;
-        }
-        $msgs = array();
-        $model = new ClassesModel();
-        $stunum = 0;
-        foreach ($this->deptments as $dept) {
-            $ret = $model->addDeptment(
-                $this->superiorid,
-                $dept['deptname'],
-                $dept['code'],
-                $this->crid,
-                0,
-                $stunum
-            );
-            if (!empty($ret) && $this->uid > 0) {
-                //将添加教师加入班级
-                $classTeacherModel = new ClassTeacherModel();
-                $classTeacherModel->addTeacher($this->uid, $ret);
-            }
-            if ($ret === false) {
-                $msgs[] = $dept['deptname'].'添加失败';
-            } else if ($ret === -1) {
-                $msgs[] = $dept['deptname'].'，名称重复添加失败';
-            } else if ($ret === -2) {
-                $msgs[] = $dept['code'].'，编号重复添加失败';
-            }
-        }
-        return $msgs;
-    }
-    /**
      * 修改部门
      */
     public function updateDeptmentAction() {
@@ -606,8 +583,7 @@ class EnterpriseController extends Controller {
 	public function classCourseCountAction(){
 		$model = new ClasscourseModel();
         return $model->getFolderidCountByClassid(
-            $this->classids,
-			$this->crid
+            $this->classids
         );
 	}
 	
@@ -742,6 +718,57 @@ class EnterpriseController extends Controller {
     public function verifyAction() {
         $deptModel = new ClassesModel();
         return $deptModel->verify($this->deptName, $this->code, $this->crid);
+    }
+
+    /**
+     * 导入部门
+     */
+    public function importDeptmentsAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return array(
+                'errno' => 100,
+                'msg' => '部门导入功能被锁，请稍候再试'
+            );
+        }
+        $depts = json_decode($this->deptments, true);
+        if (empty($depts) || !is_array($depts)) {
+            if (empty($depts)) {
+                return array(
+                    'errno' => 1,
+                    'msg' => '部门数据不能为空'
+                );
+            }
+        }
+        $depts = array_filter($depts, function($dept) {
+            return !empty($dept['deptname']) && isset($dept['code']);
+        });
+        if (empty($depts)) {
+            return array(
+                'errno' => 1,
+                'msg' => '部门数据不能为空'
+            );
+        }
+        Ebh()->cache->set($lockid, SYSTIME);
+        $model = new ClassesModel();
+        $ret = $model->importDeptments($this->crid, $this->superiorId, $depts);
+        Ebh()->cache->delete($lockid);
+        if ($ret === true) {
+            return array(
+                'errno' => 0
+            );
+        }
+        if ($ret === false) {
+            return array(
+                'errno' => 2,
+                'msg' => '上级部门不存在，导入失败'
+            );
+        }
+        return array(
+            'errno' => 3,
+            'msg' => $ret
+        );
     }
 
     /**

@@ -411,6 +411,7 @@ class ClassesModel{
      * @return bool
      */
     public function addDeptment($superiorId, $deptname, $code, $crid, $displayorder = 0, &$stunum = 0) {
+        Ebh()->db->set_con(0);
         $crid = intval($crid);
         $superiorId = intval($superiorId);
         $superior = Ebh()->db->query(
@@ -442,18 +443,7 @@ class ClassesModel{
             }
         }
         if ($code == '') {
-            $maxCode = Ebh()->db->query('SELECT MAX(`code`) AS `code` FROM `ebh_classes` WHERE `crid`='.$crid)->row_array();
-            if (!empty($maxCode['code'])) {
-                $code = preg_replace_callback('/^([^\d]*?)(\d*)$/', function($matches) {
-                    if ($matches[2] == '') {
-                        return $matches[1].'0001';
-                    }
-                    $len = strlen($matches[2]);
-                    return $matches[1].str_pad(intval($matches[2]) + 1, $len, '0', STR_PAD_LEFT);
-                }, $maxCode['code']);
-            } else {
-                $code = 10001;
-            }
+            $code = $this->getNextDeptCode($crid);
         }
 
         $lft = intval($superior['rgt']);
@@ -471,12 +461,12 @@ class ClassesModel{
             'path' => $superior['path'].'/'.$deptname
         );
         Ebh()->db->begin_trans();
-        Ebh()->db->query('UPDATE `ebh_classes` SET `lft`=`lft`+2 WHERE `lft`>='.$lft);
+        Ebh()->db->query('UPDATE `ebh_classes` SET `lft`=`lft`+2 WHERE `lft`>='.$lft.' AND `crid`='.$crid, false);
         if (Ebh()->db->trans_status() === false) {
             Ebh()->db->rollback_trans();
             return false;
         }
-        Ebh()->db->query('UPDATE `ebh_classes` SET `rgt`=`rgt`+2 WHERE `rgt`>='.$lft);
+        Ebh()->db->query('UPDATE `ebh_classes` SET `rgt`=`rgt`+2 WHERE `rgt`>='.$lft.' AND `crid`='.$crid, false);
         if (Ebh()->db->trans_status() === false) {
             Ebh()->db->rollback_trans();
             return false;
@@ -1266,5 +1256,140 @@ class ClassesModel{
             );
         }
         return $ret;
+    }
+
+    /**
+     * 获取下级部门下一编号
+     * @param int $crid 网校ID
+     * @return string
+     */
+    public function getNextDeptCode($crid) {
+        Ebh()->db->set_con(0);
+        $codes = Ebh()->db->query('SELECT `code` FROM `ebh_classes` WHERE `crid`='.$crid)->list_field();
+        if (empty($codes)) {
+            return '10001';
+        }
+        $codeIndexs = array_map(function($code) {
+            if (is_numeric($code)) {
+                return max(0, intval($code));
+            }
+            if (preg_match('/^([a-zA-Z0-9]*?)(\d+)$/', $code, $matchs)) {
+                return intval($matchs[2]);
+            }
+            return 0;
+        }, $codes);
+        $k = max($codeIndexs);
+        $codeIndexs = array_flip($codeIndexs);
+        $code = $codes[$codeIndexs[$k]];
+        if (is_numeric($code)) {
+            if ($code <= 0) {
+                return 10001;
+            }
+            $len = strlen($code);
+            return str_pad(intval($code) + 1, $len, '0', STR_PAD_LEFT);
+        }
+        if (preg_match('/^([a-zA-Z0-9]*?)(\d+)$/', $code, $matchs)) {
+            $len = strlen($matchs[2]);
+            return $matchs[1].str_pad(intval($matchs[2] + 1), $len, '0', STR_PAD_LEFT);
+        }
+        return 10001;
+    }
+
+    /**
+     * 导入部门
+     * @param int $crid 网校ID
+     * @param int superiorId 导入上级部门ID
+     * @param array $depts 部门集
+     * @return mixed
+     */
+    public function importDeptments($crid, $superiorId, $depts) {
+        Ebh()->db->set_con(0);
+        $superior = Ebh()->db->query(
+            'SELECT `classid`,`lft`,`rgt`,`path` FROM `ebh_classes` WHERE `classid`='.$superiorId.' AND `crid`='.$crid)
+            ->row_array();
+        if (empty($superior)) {
+            return false;
+        }
+        $datas = Ebh()->db->query('SELECT `code`,`classname`,`superior` FROM `ebh_classes` WHERE `crid`='.$crid.' AND `status`=0')->list_array();
+        $codes = array_column($depts, 'code');
+        $codes = array_filter($codes, function($code) {
+           return $code != '';
+        });
+        $names = array_column($depts, 'deptname');
+        if (!empty($datas)) {
+            $dataCodes = array_column($datas, 'code');
+            $datas = array_filter($datas, function($code) use($superiorId) {
+                return $code['superior'] == $superiorId;
+            });
+            $dataNames = array_column($datas, 'classname');
+            unset($datas);
+            $repeatCodes = array_intersect($codes, $dataCodes);
+            $repeatNames = array_intersect($names, $dataNames);
+            $errs = '';
+            if (!empty($repeatCodes)) {
+                $errs = '重复部门编号：'.implode(', ', $repeatCodes);
+            }
+            if (!empty($repeatNames)) {
+                $errs .= '; 重复部门名称：'.implode(', ', $repeatNames);
+            }
+            if (!empty($errs)) {
+                return ltrim($errs, ';');
+            }
+            $codes = array_merge($codes, $dataCodes);
+            unset($repeatCodes, $repeatNames);
+        }
+        $codeIndexs = array_map(function($code) {
+            if (is_numeric($code)) {
+                return max(0, intval($code));
+            }
+            if (preg_match('/^([a-zA-Z0-9]*?)(\d+)$/', $code, $matchs)) {
+                return intval($matchs[2]);
+            }
+            return 0;
+        }, $codes);
+        $k = max($codeIndexs);
+        $codeIndexs = array_flip($codeIndexs);
+        $code = $codes[$codeIndexs[$k]];
+        unset($codeIndexs);
+        $prx = '';
+        $step = 10000;
+        $len = 5;
+        $base = $lft = $superior['rgt'];
+        $newLen = count($depts) * 2;
+        if (preg_match('/^([a-zA-Z0-9]*?)(\d+)$/', $code, $matchs)) {
+            if (!empty($matchs[1])) {
+                $prx = $matchs[1];
+            }
+            $len = strlen($matchs[2]);
+            $step = intval($matchs[2]);
+        }
+        $sql = array();
+        foreach ($depts as $index => $dept) {
+            $args = array(
+                'classname' => Ebh()->db->escape($dept['deptname']),
+                'grade' => 0,
+                'crid' => $crid,
+                'year' => 0,
+                'stunum' => 0,
+                'dateline' => SYSTIME,
+                'status' => 0,
+                'district' => 0,
+                'headteacherid' => 0,
+                'category' => 0,
+                'superior' => $superiorId,
+                'lft' => $lft++,
+                'rgt' => $lft++,
+                'displayorder' => 0,
+                'path' => Ebh()->db->escape($superior['path'].'/'.$dept['deptname'])
+            );
+            $code = $dept['code'] == '' ? $prx.str_pad(++$step, $len, '0', STR_PAD_LEFT) : $dept['code'];;
+            $args['code'] = Ebh()->db->escape($code);
+            $sql[] = '('.implode(',', $args).')';
+        }
+        Ebh()->db->query('UPDATE `ebh_classes` SET `lft`=`lft`+'.$newLen.' WHERE `lft`>='.$base.' AND `crid`='.$crid, false);
+        Ebh()->db->query('UPDATE `ebh_classes` SET `rgt`=`rgt`+'.$newLen.' WHERE `rgt`>='.$base.' AND `crid`='.$crid, false);
+        $sql = 'INSERT INTO `ebh_classes`(`classname`,`grade`,`crid`,`year`,`stunum`,`dateline`,`status`,`district`,`headteacherid`,`category`,`superior`,`lft`,`rgt`,`displayorder`,`path`,`code`) VALUES '.implode(',', $sql);
+        Ebh()->db->query($sql, false);
+        return true;
     }
 }

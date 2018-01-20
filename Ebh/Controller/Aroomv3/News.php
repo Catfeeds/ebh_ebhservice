@@ -131,6 +131,10 @@ class NewsController extends Controller
                     'name' => 'thumb',
                     'type' => 'string'
                 ),
+				'thumb_mobile' => array(
+                    'name' => 'thumb_mobile',
+                    'type' => 'string'
+                ),
                 'uid' => array(
                     'name' => 'uid',
                     'type' => 'int',
@@ -192,6 +196,10 @@ class NewsController extends Controller
                 ),
                 'thumb' => array(
                     'name' => 'thumb',
+                    'type' => 'string'
+                ),
+				'thumb_mobile' => array(
+                    'name' => 'thumb_mobile',
                     'type' => 'string'
                 ),
                 'uid' => array(
@@ -428,6 +436,9 @@ class NewsController extends Controller
         if ($this->thumb !== NULL) {
             $params['thumb'] = $this->thumb;
         }
+		if ($this->thumb_mobile !== NULL) {
+            $params['thumb_mobile'] = $this->thumb_mobile;
+        }
         if ($this->viewnum !== NULL) {
             $params['viewnum'] = $this->viewnum;
         }
@@ -469,6 +480,9 @@ class NewsController extends Controller
         }
         if ($this->thumb !== NULL) {
             $params['thumb'] = $this->thumb;
+        }
+		if ($this->thumb_mobile !== NULL) {
+            $params['thumb_mobile'] = $this->thumb_mobile;
         }
         if ($this->status !== NULL) {
             $params['status'] = $this->status;

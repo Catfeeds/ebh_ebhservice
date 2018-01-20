@@ -31,6 +31,9 @@ class NewsModel {
         if (isset($params['thumb'])) {
             $formatParams['thumb'] = $params['thumb'];
         }
+		if (isset($params['thumb_mobile'])) {
+            $formatParams['thumb_mobile'] = $params['thumb_mobile'];
+        }
         if (isset($params['viewnum'])) {
             $formatParams['viewnum'] = intval($params['viewnum']);
         }
@@ -88,6 +91,9 @@ class NewsModel {
         if (isset($params['thumb'])) {
             $formatParams['thumb'] = $params['thumb'];
         }
+		if (isset($params['thumb_mobile'])) {
+            $formatParams['thumb_mobile'] = $params['thumb_mobile'];
+        }
         if (isset($params['message'])) {
             $formatParams['message'] = $params['message'];
         }
@@ -140,7 +146,7 @@ class NewsModel {
      */
     public function getModel($itemid) {
         $itemid = (int) $itemid;
-        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status`,`attid`,`isinternal` FROM `ebh_news` WHERE `itemid`='.$itemid;
+        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`thumb_mobile`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status`,`attid`,`isinternal` FROM `ebh_news` WHERE `itemid`='.$itemid;
         return Ebh()->db->query($sql)->row_array();
     }
 

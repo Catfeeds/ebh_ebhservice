@@ -1255,17 +1255,20 @@ class CourseController extends Controller {
         $params['uid'] = $this->uid;
         $params['crid'] = $this->crid;
         $params['orderBy'] = $this->orderBy;
+        $params['apiName'] = $_SERVER['REQUEST_URI'];
         if(0 >= $params['uid']){
             return '教师uid不能为空';
         }
         if(0 >= $params['crid']){
             return '网校id不能为空';
         }
-
-
+        $cacheKey = implodeKey($params);
+        $ret   = Ebh()->cache->get($cacheKey);
+        if(!empty($ret))
+            return $ret;
         $model = new FolderModel();
         $ret   = $model->teacherCourseList($params);
-
+        Ebh()->cache->set($cacheKey,$ret,300);
         return $ret;
     }
 
@@ -1345,8 +1348,16 @@ class CourseController extends Controller {
    public function getCourseClassAction(){
        $params['uid'] = $this->uid;
        $params['crid']= $this->crid;
+       $params['apiName'] = $_SERVER['REQUEST_URI'];
+       $key   = implodeKey($params);
+       $ret                     = Ebh()->cache->get($key);
+       if(!empty($ret)){
+           return $ret;
+
+       }
        $model = new FolderModel();
        $ret   = $model->getClass($params);
+       Ebh()->cache->set($key,$ret,300);
        return $ret;
    }
 }

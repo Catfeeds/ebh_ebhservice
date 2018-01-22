@@ -980,7 +980,7 @@ class EnterpriseController extends Controller {
             }
             $classids = array_keys($dept['children']);
             array_multisort($classids, SORT_ASC, SORT_NUMERIC, $dept['children']);
-            $lft = call_user_func(__METHOD__, $dept['children'], $rootPath.'/'.$dept['classname'], $lft);
+            $lft = $this->treePath($dept['children'], $rootPath.'/'.$dept['classname'], $lft);
             $dept['rgt'] = $lft++;
         }
         return $lft;
@@ -1001,7 +1001,7 @@ class EnterpriseController extends Controller {
                 $group[] = $dept;
                 continue;
             }
-            $subGroup = call_user_func(__METHOD__, $dept['children']);
+            $subGroup = $this->singleDimensional($dept['children']);
             unset($dept['children']);
             $group[] = $dept;
             $group = array_merge($group, $subGroup);

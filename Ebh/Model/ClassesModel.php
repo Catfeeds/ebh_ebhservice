@@ -407,10 +407,9 @@ class ClassesModel{
      * @param string $code 部门编号
      * @param int $crid 所属网校ID
      * @param int $displayorder 同级部门优先级，降序
-     * @param int $stunum 部门编号
      * @return bool
      */
-    public function addDeptment($superiorId, $deptname, $code, $crid, $displayorder = 0, &$stunum = 0) {
+    public function addDeptment($superiorId, $deptname, $code, $crid, $displayorder = 0) {
         Ebh()->db->set_con(0);
         $crid = intval($crid);
         $superiorId = intval($superiorId);
@@ -420,7 +419,6 @@ class ClassesModel{
         if (empty($superior)) {
             return false;
         }
-        $stunum = $superior['stunum'];
         $wheres = array(
             '`crid`='.$crid
         );
@@ -428,16 +426,18 @@ class ClassesModel{
             $wheres[] = '`superior`='.$superiorId;
             $wheres[] = '`classname`='.Ebh()->db->escape($deptname);
         } else {
-            $wheres[] = '(`classname`='.Ebh()->db->escape($deptname).' OR `code`='.Ebh()->db->escape($code).')';
+            $wheres[] = '(`classname`='.Ebh()->db->escape($deptname).' AND `superior`='.$superiorId.' OR `code`='.Ebh()->db->escape($code).')';
         }
         $brothers = Ebh()->db->query('SELECT `classid`,`classname`,`code`,`superior` FROM `ebh_classes` WHERE '.implode(' AND ', $wheres))->list_array();
         if (!empty($brothers)) {
             //部门名称/部门编号不能重复
             foreach ($brothers as $brother) {
+                //部门编号全网校唯一
                 if ($code == $brother['code']) {
                     return -2;
                 }
-                if ($brother['superior'] == $superiorId && $brother['classname'] == $deptname) {
+                //部门名称同一级唯一
+                if ($brother['classname'] == $deptname) {
                     return -1;
                 }
             }
@@ -560,32 +560,32 @@ class ClassesModel{
             return Ebh()->db->update('ebh_classes', $setArr, '`classid`='.$classid.' AND `crid`='.$crid);
         }
         //更新所有下级部门path
+        $upsql = array();
         foreach ($children as $deptid => $child) {
             if ($child['superior'] == $superior['classid']) {
                 $children[$deptid]['path'] = $root_path.'/'.$child['classname'];
+                $upsql[] = 'WHEN '.$deptid.' THEN '.Ebh()->db->escape($root_path.'/'.$child['classname']);
                 continue;
             }
             if (isset($children[$child['superior']])) {
                 $children[$deptid]['path'] = $children[$child['superior']]['path'].'/'.$child['classname'];
+                $upsql[] = 'WHEN '.$deptid.' THEN '.Ebh()->db->escape($children[$child['superior']]['path'].'/'.$child['classname']);
             }
         }
+        $deptids = array_keys($children);
         Ebh()->db->begin_trans();
         $affected_rows = Ebh()->db->update('ebh_classes', $setArr, '`classid`='.$classid.' AND `crid`='.$crid);
         if (Ebh()->db->trans_status() === false) {
             Ebh()->db->rollback_trans();
             return false;
         }
-        foreach ($children as $did => $subdept) {
-            $setArr = array(
-                'path' => $subdept['path']
-            );
-            $affected_rows += Ebh()->db->update('ebh_classes', $setArr, '`classid`='.$did.' AND `crid`='.$crid);
-            if (Ebh()->db->trans_status() === false) {
-                Ebh()->db->rollback_trans();
-                return false;
-            }
+        $sql = 'UPDATE `ebh_classes` SET `path`=CASE `classid` '.implode(' ', $upsql).' END WHERE `classid` IN('.implode(',', $deptids).') AND `crid`='.$crid;
+        Ebh()->db->query($sql, false);
+        $affected_rows += Ebh()->db->affected_rows();
+        if (Ebh()->db->trans_status() === false) {
+            Ebh()->db->rollback_trans();
+            return false;
         }
-
         Ebh()->db->commit_trans();
         return $affected_rows;
     }

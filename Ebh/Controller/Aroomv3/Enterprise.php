@@ -372,6 +372,18 @@ class EnterpriseController extends Controller {
                     'require' => true,
                     'type' => 'string'
                 )
+            ),
+            'resetDeptAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'crname' => array(
+                    'name' => 'crname',
+                    'type' => 'string',
+                    'require' => true
+                )
             )
         );
     }
@@ -400,6 +412,7 @@ class EnterpriseController extends Controller {
                         return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
                     });
                 }
+                unset($teacherDepts);
                 $depts = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
                 unset($parents);
                 if (empty($depts)) {
@@ -440,21 +453,25 @@ class EnterpriseController extends Controller {
                 'code' => '-',
                 'displayorder' => 0,
                 'lft' => 1,
-                'rgt' => 2
+                'rgt' => 2147483647
             );
+
         }
         unset($roots);
         $reset = false;
-        foreach ($depts as $dept) {
-            if (empty($dept['category']) && !isset($depts[$dept['superior']])) {
-                $reset = true;
-                break;
+        if (empty($role['limitscope'])) {
+            foreach ($depts as $dept) {
+                if (empty($dept['category']) && !isset($depts[$dept['superior']])) {
+                    $reset = true;
+                    break;
+                }
             }
         }
+
         if (!$reset && empty($role['limitscope'])) {
             $lfts = array_column($depts, 'lft');
             $rgts = array_column($depts, 'rgt');
-            $lfts = array_merge($lfts, $lfts);
+            $lfts = array_merge($lfts, $rgts);
             $rgt = count($depts) * 2;
             $lfts = array_flip($lfts);
             $rgts = array_fill(1, $rgt, 0);
@@ -465,9 +482,19 @@ class EnterpriseController extends Controller {
             }
             unset($rgts, $lfts);
         }
+
         if ($reset) {
             //重置部门结构
             $depts = $this->resetDept($this->crid, $depts, $this->crname, $model);
+        }
+        if (!empty($role['limitscope'])) {
+            array_walk($depts, function(&$dept, $deptid, $depts) {
+                if (!isset($depts[$dept['superior']]) && $deptid != -1) {
+                    $dept['superior'] = -1;
+                }
+            }, $depts);
+            $lfts = array_column($depts, 'lft');
+            array_multisort($lfts, SORT_ASC, SORT_NUMERIC, $depts);
         }
         if ($showTeachers) {
             //注入讲师数据
@@ -490,24 +517,23 @@ class EnterpriseController extends Controller {
      * 添加部门
      */
     public function addDeptmentAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return array(
+                'newid' => false
+            );
+        }
         $model = new ClassesModel();
-        $stunum = 0;
         $ret = $model->addDeptment(
             $this->superiorid,
             $this->deptname,
             $this->code,
             $this->crid,
-            intval($this->displayorder),
-            $stunum
+            intval($this->displayorder)
         );
-        if (!empty($ret) && $this->uid > 0) {
-            //将添加教师加入班级
-            $classTeacherModel = new ClassTeacherModel();
-            $classTeacherModel->addTeacher($this->uid, $ret);
-        }
         return array(
-            'newid' => $ret,
-            'stunum' => $stunum
+            'newid' => $ret
         );
     }
 
@@ -515,6 +541,11 @@ class EnterpriseController extends Controller {
      * 修改部门
      */
     public function updateDeptmentAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return false;
+        }
         $model = new ClassesModel();
         $params = array(
             'classname' => $this->deptname,
@@ -778,6 +809,22 @@ class EnterpriseController extends Controller {
     }
 
     /**
+     * 重置部门分组参数
+     * @return bool
+     */
+    public function resetDeptAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return false;
+        }
+        $model = new ClassesModel();
+        $depts = $model->getDeptmentTree($this->crid, true);
+        $this->resetDept($this->crid, $depts, $this->crname, $model);
+        return true;
+    }
+
+    /**
      * 重置部门
      * @param int $crid 网校ID
      * @param array $depts 部门
@@ -929,14 +976,12 @@ class EnterpriseController extends Controller {
             $dept['path'] = $rootPath.'/'.$dept['classname'];
             if (empty($dept['children'])) {
                 $dept['rgt'] = $lft++;
-            } else {
-                $displayorders = array_column($dept['children'], 'displayorder');
-                $classids = array_keys($dept['children']);
-                array_multisort($displayorders, SORT_ASC, SORT_NUMERIC,
-                    $classids, SORT_DESC, SORT_NUMERIC, $dept['children']);
-                $lft = $this->treePath($dept['children'], $rootPath.'/'.$dept['classname'], $lft);
-                $dept['rgt'] = $lft++;
+                continue;
             }
+            $classids = array_keys($dept['children']);
+            array_multisort($classids, SORT_ASC, SORT_NUMERIC, $dept['children']);
+            $lft = call_user_func(__METHOD__, $dept['children'], $rootPath.'/'.$dept['classname'], $lft);
+            $dept['rgt'] = $lft++;
         }
         return $lft;
     }
@@ -954,12 +999,12 @@ class EnterpriseController extends Controller {
         foreach ($depts as $dept) {
             if (empty($dept['children'])) {
                 $group[] = $dept;
-            } else {
-                $subGroup = $this->singleDimensional($dept['children']);
-                unset($dept['children']);
-                $group[] = $dept;
-                $group = array_merge($group, $subGroup);
+                continue;
             }
+            $subGroup = call_user_func(__METHOD__, $dept['children']);
+            unset($dept['children']);
+            $group[] = $dept;
+            $group = array_merge($group, $subGroup);
         }
         return $group;
     }

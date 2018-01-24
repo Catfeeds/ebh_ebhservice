@@ -285,6 +285,10 @@ class RoomController extends Controller
                 'isdepartment' => array(
                     'name' => 'isdepartment',
                     'type' => 'int'
+                ),
+				'cwlistonlyself' => array(
+                    'name' => 'cwlistonlyself',
+                    'type' => 'int'
                 )
             ),
             //登录限制
@@ -1064,6 +1068,9 @@ class RoomController extends Controller
         }
         if ($this->isdepartment !== NULL) {
             $params['isdepartment'] = min(1, max(0, $this->isdepartment));
+        }
+		if ($this->cwlistonlyself !== NULL) {
+            $params['cwlistonlyself'] = min(1, max(0, $this->cwlistonlyself));
         }
         if ($model->exists($this->crid)) {
             return $model->update($this->crid, $params);

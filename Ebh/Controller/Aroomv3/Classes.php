@@ -81,7 +81,13 @@ class ClassesController extends Controller{
             'getClassInfoByCridAction'    =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'array'),
-            )
+            ),
+            'getRoomListAction'   =>  array(
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
+                'grade'  =>  array('name'=>'grade','type'=>'int'),
+                'k'  =>  array('name'=>'k','type'=>'string'),
+                'limit'  =>  array('name'=>'limit','type'=>'string'),
+            ),
 
         );
     }
@@ -306,6 +312,30 @@ class ClassesController extends Controller{
     public function getClassInfoByCridAction(){
         $classesModel  = new ClassesModel();
         return $classids = $classesModel->getClassInfoByCrid($this->crid,$this->uid);
+    }
+
+    /**
+     * 获取网校的班级列表（根据网校/年级）
+     */
+    public function getRoomListAction(){
+        $parameters = array();
+        $roomlist = array();
+        $classesModel  = new ClassesModel();
+        $parameters['crid'] = $this->crid;
+        if(isset($this->k)){
+            $parameters['k'] = $this->k;
+        }
+        if(!empty($this->grade)){
+            $parameters['grade'] = $this->grade;
+        }
+        if(!empty($this->limit)){
+            $parameters['limit'] = $this->limit;
+        }
+        $ret = $classesModel->getRoomList($parameters);
+        if(!empty($ret) && is_array($ret)){
+            $roomlist = $ret;
+        }
+        return $roomlist;
     }
 
 }

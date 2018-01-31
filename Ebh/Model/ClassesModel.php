@@ -1392,4 +1392,30 @@ class ClassesModel{
         Ebh()->db->query($sql, false);
         return true;
     }
+
+    /**
+     * 获取网校的班级列表（根据网校/年级）
+     * @param  $crid
+     * @param  $grade
+     * @return array
+     */
+    public function getRoomList($param) {
+        if(empty($param['crid'])){
+            return false;
+        }
+        $sql = 'SELECT `classid`,`classname`,`stunum`,`grade`,`crid`,`dateline`,`headteacherid`,`code`,`superior` FROM ebh_classes ';
+        $sql .=' WHERE `crid`='.intval($param['crid']).' AND `status`=0 ';
+        if(isset($param['k'])){
+            $sql .= ' AND `classname` LIKE \'%'.Ebh()->db->escape_str($param['k']).'%\'';
+        }
+        $grade = !empty($param['grade']) ? intval($param['grade']) : 0;//年级
+        if($grade>0){
+            $sql .= 'AND `grade`=' .$grade;
+        }
+        if(!empty($param['limit'])) {
+            $sql .= ' LIMIT '. Ebh()->db->escape_str($param['limit']);
+        }
+        $sql .= ' ORDER BY `classid` DESC';
+        return Ebh()->db->query($sql)->list_array();
+    }
 }

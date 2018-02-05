@@ -66,7 +66,7 @@ class UserClientModel {
      */
     public function getClientCountByUid($uid,$crid,$mac,$system) {
 		
-        $sql = "select count(*) count,count(case when mac='$mac' and system='$system' then 1 end) countreg from ebh_userclients where uid=$uid and crid=$crid";
+        $sql = "select count(*) count,count(case when mac='$mac' then 1 end) countreg from ebh_userclients where uid=$uid and crid=$crid";
         $count = Ebh()->db->query($sql)->row_array();
 		return $count;
     }

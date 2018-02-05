@@ -318,6 +318,9 @@ class BundleModel{
      * @return array
      */
     public function courseList($bids) {
+        if (empty($bids)) {
+            return array();
+        }
         $wheres = array(
             '`a`.`bid` IN('.implode(',', $bids).')',
             '`a`.`astype`=0',

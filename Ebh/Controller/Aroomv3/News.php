@@ -419,6 +419,9 @@ class NewsController extends Controller
 				$news['attr'] = $attr;
 			}
 		}
+		if(empty($news['attr'])){
+			$news['attr'] = array();
+		}
 		return $news;
     }
 

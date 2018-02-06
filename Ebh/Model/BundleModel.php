@@ -111,12 +111,14 @@ class BundleModel{
             Ebh()->db->rollback_trans();
             return false;
         }
+        $now = SYSTIME;
         foreach ($itemids as $itemid) {
             Ebh()->db->insert('ebh_bundle_assos', array(
                 'bid' => $bid,
                 'asid' => $itemid,
                 'astype' => 0,
-                'status' => 0
+                'status' => 0,
+                'dateline' => $now++
             ));
             if (Ebh()->db->trans_status() === false) {
                 Ebh()->db->rollback_trans();
@@ -205,9 +207,11 @@ class BundleModel{
                 Ebh()->db->rollback_trans();
                 return false;
             }
+            $now = SYSTIME;
             foreach ($params['itemids'] as $itemid) {
-                $values = array($bid, $itemid, 0, 0);
-                Ebh()->db->query('INSERT `ebh_bundle_assos`(`bid`,`asid`,`astype`,`status`) VALUES('.implode(',', $values).') ON DUPLICATE KEY UPDATE `status`=0');
+                $now++;
+                $values = array($bid, $itemid, 0, 0, $now);
+                Ebh()->db->query('INSERT `ebh_bundle_assos`(`bid`,`asid`,`astype`,`status`,`dateline`) VALUES('.implode(',', $values).') ON DUPLICATE KEY UPDATE `status`=0,`dateline`='.$now);
                 if (Ebh()->db->trans_status() === false) {
                     Ebh()->db->rollback_trans();
                     return false;
@@ -304,7 +308,7 @@ class BundleModel{
         $sql = 'SELECT '.implode(',', $fields).' FROM `ebh_bundle_assos` `a` 
                 JOIN `ebh_pay_items` `b` ON `b`.`itemid`=`a`.`asid`  
                 JOIN `ebh_folders` `c` ON `c`.`folderid`=`b`.`folderid` 
-                WHERE '.implode(' AND ', $wheres);
+                WHERE '.implode(' AND ', $wheres).' ORDER BY `a`.`dateline` ASC';
         return Ebh()->db->query($sql)->list_array($setKey ? 'itemid' : '');
     }
 
@@ -314,6 +318,9 @@ class BundleModel{
      * @return array
      */
     public function courseList($bids) {
+        if (empty($bids)) {
+            return array();
+        }
         $wheres = array(
             '`a`.`bid` IN('.implode(',', $bids).')',
             '`a`.`astype`=0',

@@ -257,8 +257,21 @@ class SurveyModel{
         $uid = !empty($param['uid']) ? intval($param['uid']) : 0;
         $crid = !empty($param['crid']) ? intval($param['crid']) : 0;
         $type = isset($param['type']) ? intval($param['type']) : 5;
-        if(empty($uid) || empty($crid)){
+        $isroomclass = (!empty($param['isroomclass']) && ($param['isroomclass'] == 1)) ? 1 : 0;//0全校,1年级/班级
+        $classids = !empty($param['classids']) ? $param['classids'] : array();  //指定被调查班级的id集
+        $classids = array_filter($classids, function($classid) {    //过滤数组
+            return is_numeric($classid) && ($classid>0);
+        });
+        if(empty($uid) || empty($crid) || (($isroomclass == 1) && empty($classids))){
             return $return;
+        }
+        //如果有指定被调查的年级/班级,查询当前登录用户是否为其中的学生
+        if(!empty($isroomclass) && !empty($classids)){
+            $isexistlog = 'SELECT count(1) count from ebh_classstudents WHERE uid='.$uid.' AND classid IN ('.implode(',',$classids).')';
+            $isexist = $this->db->query($isexistlog)->row_array();
+            if(empty($isexist['count']) || !($isexist['count']>0)){
+                return $return;
+            }
         }
         //查询该用户回答过的调查问卷
         $sql = 'select s.sid from ebh_surveyanswers a inner join ebh_surveys s on a.sid = s.sid where s.crid = '.$crid.' and a.uid = '.$uid.' and s.type = '.$type;

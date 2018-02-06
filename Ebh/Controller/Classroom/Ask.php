@@ -83,7 +83,36 @@ class AskController extends Controller{
                 'rewards'  =>  array('name'=>'rewards','require'=>true,'type'=>'array'),
                 'aids'  =>  array('name'=>'aids','require'=>true,'type'=>'array'),
             ),
-
+            'askAnswerListAction' => array(
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
+                'pagesize' => array('name' => 'pagesize','type' => 'int'),
+                'pagenum' => array('name' => 'pagenum','type' => 'int'),
+                'early' => array('name' => 'early','type' => 'int'),
+                'latest' => array('name' => 'latest','type' => 'int'),
+                'shield' => array('name' => 'shield','type' => 'int'),
+                'folderid'  =>  array('name'=>'folderid','type' => 'int'),
+                'k' => array('name' => 'k','type' => 'string'),
+                'uid'  =>  array('name'=>'uid','type'=>'int','default' => 0),
+                'classid' => array('name' => 'classid','type' => 'int','default' => 0),
+                'roomtype' => array('name' => 'roomtype','type' => 'string','default' => 'edu')
+            ),
+            'askAnswerCountAction' => array(
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
+                'early' => array('name' => 'early','type' => 'int'),
+                'latest' => array('name' => 'latest','type' => 'int'),
+                'shield' => array('name' => 'shield','type' => 'int'),
+                'folderid'  =>  array('name'=>'folderid','type' => 'int'),
+                'k' => array('name' => 'k','type' => 'string'),
+                'uid'  =>  array('name'=>'uid','type'=>'int','default' => 0),
+                'classid' => array('name' => 'classid','type' => 'int','default' => 0),
+                'roomtype' => array('name' => 'roomtype','type' => 'string','default' => 'edu')
+            ),
+            'setShieldAction' => array(
+                'aid'  =>  array('name'=>'aid','require'=>true,'type'=>'int','min'=>1),
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
+                'shield' => array('name' => 'shield','type' => 'int','require' => true),
+                'iszjdlr' => array('name' => 'iszjdlr','type' => 'int'),
+            ),
         );
     }
 
@@ -661,5 +690,174 @@ class AskController extends Controller{
         }
     }
 
+    /**
+     * 回答列表
+     * @return mixed
+     */
+    public function askAnswerListAction() {
+        $answerMolde= new AskAnswersModel();
+        $filters = array();
+        if ($this->early !== NULL) {
+            $filters['early'] = $this->early;   //查询的开始时间
+        }
+        if ($this->latest !== NULL) {
+            $filters['latest'] = $this->latest; //查询的结束时间
+        }
+        if ($this->shield !== NULL) {
+            $filters['shield'] = $this->shield; //是否屏蔽,1屏蔽状态(国土:0审核通过，1审核不通过，2待审核)
+        }
+        if ($this->folderid !== NULL) {
+            $filters['folderid'] = $this->folderid;//课程id
+        }
+        if (!empty($this->k)) {
+            $filters['k'] = h($this->k);        //查询关键字
+        }
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array();
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return array();
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return array();
+                }
+            }
+        }
+        if (!empty($classes)) {
+            $filters['classids'] = array_column($classes, 'classid');   //班级或部门id集
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $filters['classids'])) {
+                    $filters['classids'] = array($this->classid);
+                } else {
+                    return array();
+                }
+            }
+            $filters['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $filters['roomtype'] = $this->roomtype;
+            $filters['classids'] = array($this->classid);
+        }
+        $limits = array();
+        if ($this->pagesize !== NULL) {
+            $limits['pagesize'] = $this->pagesize;
+        }
+        if ($this->pagenum !== NULL) {
+            $limits['page'] = $this->pagenum;
+        }
+        $filters['crid'] = $this->crid;
+        return $answerMolde->getAnswerList($filters, $limits);
+    }
+
+    /**
+     * 回答列表数量
+     * @return mixed
+     */
+    public function askAnswerCountAction() {
+        $answerMolde= new AskAnswersModel();
+        $filters = array();
+        if ($this->early !== NULL) {
+            $filters['early'] = $this->early;
+        }
+        if ($this->latest !== NULL) {
+            $filters['latest'] = $this->latest;
+        }
+        if ($this->shield !== NULL) {
+            $filters['shield'] = $this->shield; //是否屏蔽,1屏蔽状态(国土:0审核通过，1审核不通过，2待审核)
+        }
+        if ($this->folderid !== NULL) {
+            $filters['folderid'] = $this->folderid;
+        }
+        if (!empty($this->k)) {
+            $filters['k'] = h($this->k);
+        }
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array();
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->roomtype == 'com') {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return array();
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                }
+                log_message(json_encode($classes));
+                log_message('获取老师下班级');
+                if (empty($classes)) {
+                    return array();
+                }
+            }
+        }
+        if (!empty($classes)) {
+            $filters['classids'] = array_column($classes, 'classid');
+            if ($this->classid > 0) {
+                if (in_array($this->classid, $filters['classids'])) {
+                    $filters['classids'] = array($this->classid);
+                } else {
+                    return array();
+                }
+            }
+            $filters['roomtype'] = $this->roomtype;
+            unset($classes);
+        } else if ($this->classid > 0) {
+            $filters['roomtype'] = $this->roomtype;
+            $filters['classids'] = array($this->classid);
+        }
+        $filters['crid'] = $this->crid;
+        $ret = $answerMolde->getAnswerCount($filters);
+        $count = !empty($ret['count']) ? $ret['count'] : 0;
+        return $count;
+    }
+
+    /**
+     * 设置屏蔽状态
+     */
+    public function setShieldAction() {
+        $filters = array();
+        $answerMolde= new AskAnswersModel();
+        $filters['shield'] = ($this->shield == 0) ? 0 : 1;  //1屏蔽,0取消屏蔽(国土:1审核不通过,0审核通过)
+        $filters['aid'] = $this->aid;                       //解答的id
+        $filters['crid'] = $this->crid;
+        $filters['iszjdlr'] = (!empty($this->iszjdlr) && ($this->iszjdlr == 1)) ? 1 : 0;//1是国土
+        return $answerMolde->setShield($filters);
+    }
 
 }

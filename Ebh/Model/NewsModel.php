@@ -31,6 +31,9 @@ class NewsModel {
         if (isset($params['thumb'])) {
             $formatParams['thumb'] = $params['thumb'];
         }
+		if (isset($params['thumb_mobile'])) {
+            $formatParams['thumb_mobile'] = $params['thumb_mobile'];
+        }
         if (isset($params['viewnum'])) {
             $formatParams['viewnum'] = intval($params['viewnum']);
         }
@@ -39,6 +42,9 @@ class NewsModel {
         }
         if (isset($params['ip'])) {
             $formatParams['ip'] = $params['ip'];
+        }
+		if (isset($params['attid'])) {
+            $formatParams['attid'] = $params['attid'];
         }
         if (isset($params['status'])) {
             $status = intval($params['status']);
@@ -50,7 +56,19 @@ class NewsModel {
         if (isset($params['displayorder'])) {
             $formatParams['displayorder'] = intval($params['displayorder']);
         }
-        return Ebh()->db->insert('ebh_news', $formatParams);
+		if (isset($params['isinternal'])) {
+            $formatParams['isinternal'] = intval($params['isinternal']);
+        }
+        $res = Ebh()->db->insert('ebh_news', $formatParams);
+        //发布资讯成功,更新其分类的排序号(prank,rank)
+        if(!empty($res) && is_numeric($res) && empty($params['type'])){
+            $data = array();
+            $data['rank'] = $res;   //新发布的资讯排序号等于其itemid
+            $data['prank'] = $res;
+            $whereStr = '`itemid`='.$res.' AND `crid`='.$crid;
+            Ebh()->db->update('ebh_news', $data, $whereStr);
+        }
+        return $res;
     }
 
     /**
@@ -73,6 +91,9 @@ class NewsModel {
         if (isset($params['thumb'])) {
             $formatParams['thumb'] = $params['thumb'];
         }
+		if (isset($params['thumb_mobile'])) {
+            $formatParams['thumb_mobile'] = $params['thumb_mobile'];
+        }
         if (isset($params['message'])) {
             $formatParams['message'] = $params['message'];
         }
@@ -91,6 +112,12 @@ class NewsModel {
         if (isset($params['status'])) {
             $status = intval($params['status']);
             $formatParams['status'] = min(2, max(-1, $status));
+        }
+		if (isset($params['attid'])) {
+            $formatParams['attid'] = $params['attid'];
+        }
+		if (isset($params['isinternal'])) {
+            $formatParams['isinternal'] = intval($params['isinternal']);
         }
         if (empty($formatParams)) {
             return 0;
@@ -119,7 +146,7 @@ class NewsModel {
      */
     public function getModel($itemid) {
         $itemid = (int) $itemid;
-        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status` FROM `ebh_news` WHERE `itemid`='.$itemid;
+        $sql = 'SELECT `itemid`,`navcode`,`subject`,`message`,`note`,`thumb`,`thumb_mobile`,`crid`,`uid`,`viewnum`,`dateline`,`displayorder`,`status`,`attid`,`isinternal` FROM `ebh_news` WHERE `itemid`='.$itemid;
         return Ebh()->db->query($sql)->row_array();
     }
 
@@ -132,8 +159,10 @@ class NewsModel {
      */
     public function getList($filterParams, $limit = 20, $setKey = true) {
         $params = array();
-        if (isset($filterParams['navcode'])) {
-            $params[] = '`navcode`='.Ebh()->db->escape($filterParams['navcode']);
+        //获取资讯分类navcode的集合
+        if (isset($filterParams['navcode']) && is_string($filterParams['navcode'])) {
+            $navcode = Ebh()->db->escape($filterParams['navcode']);
+            $params[] = '`navcode` in ('.implode('\',\'',explode(',',$navcode)).')';
         }
         if (isset($filterParams['crid'])) {
             $params[] = '`crid`='.intval($filterParams['crid']);
@@ -158,7 +187,7 @@ class NewsModel {
         if (isset($filterParams['q'])) {
             $params[] = '`subject` LIKE '.Ebh()->db->escape('%'.$filterParams['q'].'%');
         }
-        $sql = 'SELECT `itemid`,`navcode`,`subject`,`note`,`thumb`,`viewnum`,`displayorder`,`dateline` FROM `ebh_news`';
+        $sql = 'SELECT `itemid`,`navcode`,`subject`,`note`,`thumb`,`viewnum`,`displayorder`,`dateline`,`prank`,`rank` FROM `ebh_news`';
         if (!empty($params)) {
             $sql .= ' WHERE '.implode(' AND ', $params);
         }
@@ -175,7 +204,13 @@ class NewsModel {
         } else {
             $pagesize = max(1, intval($limit));
         }
-        $sql .= ' ORDER BY `itemid` DESC LIMIT '.$offset.','.$pagesize;
+        //在主类或子类下,按照资讯分类排序号排序
+        if(!empty($filterParams['ranktype'])){
+            $ranktype = trim(Ebh()->db->escape($filterParams['ranktype']),'\'');
+            $sql .= ' ORDER BY `'.$ranktype.'` DESC, `itemid` DESC LIMIT '.$offset.','.$pagesize;
+        }else{
+            $sql .= ' ORDER BY `itemid` DESC LIMIT '.$offset.','.$pagesize;
+        }
         if ($setKey) {
             return Ebh()->db->query($sql)->list_array('itemid');
         }
@@ -220,8 +255,27 @@ class NewsModel {
         if (isset($filterParams['q'])) {
             $params[] = '`subject` LIKE '.Ebh()->db->escape('%'.$filterParams['q'].'%');
         }
-        $sql = 'SELECT `itemid`,`status`,`message`,`uid`,`crid`,`navcode`,`subject`,`note`,`thumb`,`viewnum`,`displayorder`,`dateline` FROM `ebh_news`';
-        $countsql = 'SELECT count(1) as c FROM `ebh_news`';
+        if (isset($filterParams['classids']) && isset($filterParams['type']) && $filterParams['type'] == 1) {
+            $params = array_map(function($param) {
+                return '`a`.'.$param;
+            }, $params);
+            if (isset($filterParams['roomtype']) && $filterParams['roomtype'] == 'com' && count($filterParams['classids']) == 1) {
+                $classid = reset($filterParams['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return array('list' => array(), 'totalpage' => 0);
+                }
+                $params[] = '`c`.`lft`>='.$class['lft'];
+                $params[] = '`c`.`rgt`<='.$class['rgt'];
+            } else {
+                $params[] = '`c`.`classid` IN('.implode(',', $filterParams['classids']).')';
+            }
+            $sql = 'SELECT `a`.`itemid`,`a`.`status`,`a`.`message`,`a`.`uid`,`a`.`crid`,`a`.`navcode`,`a`.`subject`,`a`.`note`,`a`.`thumb`,`a`.`viewnum`,`a`.`displayorder`,`a`.`dateline` FROM `ebh_news` `a` JOIN `ebh_classstudents` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`b`.`classid` AND `c`.`crid`=`a`.`crid`';
+            $countsql = 'SELECT count(1) as c FROM `ebh_news` `a` JOIN `ebh_classstudents` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`b`.`classid` AND `c`.`crid`=`a`.`crid`';
+        } else {
+            $sql = 'SELECT `itemid`,`status`,`message`,`uid`,`crid`,`navcode`,`subject`,`note`,`thumb`,`viewnum`,`displayorder`,`dateline` FROM `ebh_news`';
+            $countsql = 'SELECT count(1) as c FROM `ebh_news`';
+        }
         if (!empty($params)) {
             $sql .= ' WHERE '.implode(' AND ', $params);
             $countsql .= ' WHERE '.implode(' AND ', $params);
@@ -258,8 +312,10 @@ class NewsModel {
      */
     public function getCount($filterParams) {
         $params = array();
-        if (isset($filterParams['navcode'])) {
-            $params[] = '`navcode`='.Ebh()->db->escape($filterParams['navcode']);
+        //获取资讯分类navcode的集合
+        if (isset($filterParams['navcode']) && is_string($filterParams['navcode'])) {
+            $navcode = Ebh()->db->escape($filterParams['navcode']);
+            $params[] = '`navcode` in ('.implode('\',\'',explode(',',$navcode)).')';
         }
         if (isset($filterParams['crid'])) {
             $params[] = '`crid`='.intval($filterParams['crid']);
@@ -271,9 +327,9 @@ class NewsModel {
             $params[] = '`status`='.intval($filterParams['status']);
         }
         if (isset($filterParams['type'])) {
-            $params['type'] = $filterParams['type'];
+            $params[] = '`type`='.intval($filterParams['type']);//原创文章类型为1，其他为0
         } else {
-            $params['type'] = 0;
+            $params[] = '`type`=0';
         }
         if (isset($filterParams['early'])) {
             $params[] = '`dateline`>='.intval($filterParams['early']);
@@ -375,12 +431,36 @@ class NewsModel {
         if (isset($filterParams['q'])) {
             $params[] = '`r`.`comment` LIKE '.Ebh()->db->escape('%'.$filterParams['q'].'%');
         }
-        $sql = 'SELECT `r`.`rwid`,`r`.`status`,`r`.`uid`,`r`.`itemid`,`r`.`comment`,`r`.`dateline` as `rdateline`,`a`.`subject`,`a`.`uid` as `auid` ,`a`.`viewnum`,`a`.`itemid`,`a`.`dateline` FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+        if (isset($filterParams['classids'])) {
+            if (isset($filterParams['roomtype']) && $filterParams['roomtype'] == 'com' && count($filterParams['classids']) == 1) {
+                $classid = reset($filterParams['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return array('list' => array(), 'totalpage' => 0);
+                }
+                $params[] = '`c`.`lft`>='.$class['lft'];
+                $params[] = '`c`.`rgt`<='.$class['rgt'];
+            } else {
+                $params[] = '`cs`.`classid` IN('.implode(',', $filterParams['classids']).')';
+            }
+
+            $sql = 'SELECT `r`.`rwid`,`r`.`status`,`r`.`uid`,`r`.`itemid`,`r`.`comment`,`r`.`dateline` as `rdateline`,`a`.`subject`,`a`.`uid` as `auid` ,`a`.`viewnum`,`a`.`itemid`,`a`.`dateline` FROM `ebh_news_reviews` `r` JOIN `ebh_classstudents` `cs` ON `cs`.`uid`=`r`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`cs`.`classid` AND `c`.`crid`=`r`.`crid` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+        } else {
+            $sql = 'SELECT `r`.`rwid`,`r`.`status`,`r`.`uid`,`r`.`itemid`,`r`.`comment`,`r`.`dateline` as `rdateline`,`a`.`subject`,`a`.`uid` as `auid` ,`a`.`viewnum`,`a`.`itemid`,`a`.`dateline` FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+        }
 
          if (!isset($filterParams['articleid']) && empty($filterParams['allreviews'])) {//有articleid说明，单个文章下所有评论，不去重
-            $countsql = 'SELECT count(distinct `r`.`itemid`) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+             if (isset($filterParams['classids'])) {
+                 $countsql = 'SELECT count(distinct `r`.`itemid`) as c FROM `ebh_news_reviews` `r` JOIN `ebh_classstudents` `cs` ON `cs`.`uid`=`r`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`cs`.`classid` and `c`.`crid`=`r`.`crid` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+             } else {
+                 $countsql = 'SELECT count(distinct `r`.`itemid`) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+             }
          } else {
-              $countsql = 'SELECT count(1) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+              if (isset($filterParams['classids'])) {
+                  $countsql = 'SELECT count(1) as c FROM `ebh_news_reviews` `r` JOIN `ebh_classstudents` `cs` ON `cs`.`uid`=`r`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`cs`.`classid` AND `c`.`crid`=`r`.`crid` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+              } else {
+                  $countsql = 'SELECT count(1) as c FROM `ebh_news_reviews` `r` LEFT JOIN `ebh_news` `a` ON `r`.`itemid`= `a`.`itemid`';
+              }
          }
         if (!empty($params)) {
             $sql .= ' WHERE '.implode(' AND ', $params);
@@ -526,7 +606,13 @@ class NewsModel {
         if (!empty($params)) {
             $sql .= ' WHERE '.implode(' AND ', $params);
         }
-        $sql .= ' ORDER BY `itemid` DESC ';
+        //在主类或子类下,按照资讯分类排序号排序
+        if(!empty($filterParams['ranktype'])){
+            $ranktype = trim(Ebh()->db->escape($filterParams['ranktype']),'\'');
+            $sql .= ' ORDER BY `'.$ranktype.'` DESC, `itemid` DESC ';
+        }else{
+            $sql .= ' ORDER BY `itemid` DESC ';
+        }
         if(isset($offset) && !empty($pagesize)){
             $sql .= ' LIMIT '.$offset.','.$pagesize;
         }
@@ -566,5 +652,64 @@ class NewsModel {
             $result = $res['count'];
         }
         return $result;
+    }
+
+    /**
+     * 移动资讯(交换位置改变排序号)
+     * @param $data itemid,crid,step,navcode,ranktype
+     * @return bool
+     */
+    public function rankNews($data) {
+        $param = array();
+        $itemidarr = array();   //资讯id的集合
+        $ranktype = '';         //排序类型,prank主类中资讯的排序,rank子类中资讯的排序(没有子类的资讯分类均为rank)
+        $navcode = '';          //资讯分类的集合
+        $nowpos = 0;            //当前资讯的排序位置
+        $changepos = 0;         //待交换位置资讯的排序
+        $changeitemid = 0;      //待交换位置资讯的id
+        $itemid = intval($data['itemid']);  //资讯id
+        $crid = intval($data['crid']);
+        $step = intval($data['step']);      //资讯移动,1下移,-1上移
+        $navcode = Ebh()->db->escape($data['navcode']);
+        $ranktype = trim(Ebh()->db->escape($data['ranktype']),'\'');
+        if (($itemid == 0) || ($crid == 0) || ($step == 0) || empty($navcode) || empty($ranktype) || !in_array($ranktype,array('prank','rank')) || !in_array($step,array(1,-1))) {
+            return false;
+        }
+        //按照排序顺序查询当前分类下的所有资讯列表
+        $newsql = 'SELECT `itemid`,`prank`,`rank`,`navcode` FROM ebh_news WHERE `crid`='.$crid.' AND `navcode` in ('.implode('\',\'',explode(',',$navcode)).') AND `status`=1 AND `type`=0';
+        $newsql .= ' ORDER BY `'.$ranktype.'` DESC,`itemid` DESC';//先按照主类或子类资讯排序,再id
+        $news = Ebh()->db->query($newsql)->list_array();
+        if(empty($news)){
+            return FALSE;
+        }
+        //获取当前资讯及要交换位置资讯的id、排序号
+        if(is_array($news)){
+            foreach ($news as $index=>$new){
+                if(!empty($new['itemid'])){
+                    if(empty($new[$ranktype])){         //判断当排序字段为空,记录资讯id
+                        $itemidarr[] = $new['itemid'];
+                    }
+                    if($new['itemid'] == $itemid){      //记录当前资讯的排序位置
+                        $nowpos = !empty($new[$ranktype]) ? $new[$ranktype] : $itemid;
+                        $theindex = $index+$step;       //step为1下移,-1上移
+                        if($theindex>=0){
+                            $changeitemid = !empty($news[$theindex]['itemid']) ? $news[$theindex]['itemid'] : 0;            //记录下一个(或者上一个)资讯的id
+                            $changepos = !empty($news[$theindex][$ranktype]) ? $news[$theindex][$ranktype] : $changeitemid; //下一个(或者上一个)资讯的排序位置
+                        }
+                    }
+                }
+            }
+            //如果当前分类下的资讯没有prank或rank排序号,更新。(排序号更新为其itemid)
+            if(!empty($itemidarr) && is_array($itemidarr)){
+                $upranksql = 'UPDATE ebh_news SET `'.$ranktype.'`=`itemid` WHERE `'.$ranktype.'`=0 AND `itemid` IN ('.implode(',',$itemidarr).')';
+                Ebh()->db->query($upranksql,false);
+            }
+        }
+        //交换排序位置
+        if(!empty($nowpos) && !empty($changepos) && !empty($changeitemid)){
+            $changesql = 'UPDATE ebh_news SET `'.$ranktype.'`=(CASE WHEN `itemid`='.$itemid.' THEN '.$changepos.' WHEN `itemid`='.$changeitemid.' THEN '.$nowpos.' END)';
+            $changesql .= ' WHERE `crid`='.$crid.' AND `itemid` in ('.$itemid.','.$changeitemid.')';
+            return Ebh()->db->query($changesql,false);
+        }
     }
 }

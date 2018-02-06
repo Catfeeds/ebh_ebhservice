@@ -58,6 +58,8 @@ class SurveyController extends Controller{
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int'),
                 'type'  =>  array('name'=>'type','default'=>5,'type'=>'int'),
+                'isroomclass'  =>  array('name'=>'isroomclass','type'=>'int'),
+                'classids'  =>  array('name'=>'classids','type'=>'array'),
             ),
             'getLastSurveyAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
@@ -156,6 +158,12 @@ class SurveyController extends Controller{
         $param['crid'] = $this->crid;
         if(!empty($this->type)){
             $param['type'] = $this->type;
+        }
+        if(!empty($this->isroomclass)){
+            $param['isroomclass'] = $this->isroomclass; //0全校,1指定年级/班级
+        }
+        if(!empty($this->classids)){
+            $param['classids'] = $this->classids;       //班级id集
         }
         return $this->surveyModel->checkSurvey($param);
     }

@@ -33,16 +33,17 @@ class CoursewareModel
         }
         return $this->db->query($sql)->row_array();
     }
-    /**
-     * 获取平台最新发布的课件
-     */
-    public function getNewCourseList($queryarr) {
-        $sql = 'SELECT c.cwid,c.title,c.summary,c.viewnum,c.reviewnum,c.dateline,c.logo,u.username,u.realname,c.cwurl,f.foldername,f.folderid,f.coursewarelogo,u.face,u.sex,c.submitat,c.endat,c.ism3u8,c.cwlength,c.truedateline,c.islive,c.uid,c.assistantid FROM ebh_coursewares c ' .
+
+    public function getNewCourseCount($queryarr) {
+        $sql = 'SELECT count(c.cwid) as count FROM ebh_coursewares c ' .
             'JOIN ebh_roomcourses rc on (c.cwid = rc.cwid) '.
             'JOIN ebh_users u on (u.uid = c.uid) '.
             'JOIN ebh_folders f on f.folderid=rc.folderid';
         $wherearr = array();
         $wherearr[] = ' c.status != -3 ';
+        if (isset($queryarr['live'])) {
+            $wherearr[] = 'c.islive=1';
+        }
         if (!empty($queryarr['crid'])) {
             $wherearr[] = 'rc.crid=' . $queryarr['crid'];
         }
@@ -64,6 +65,69 @@ class CoursewareModel
             } else {
                 $wherearr[] = '(rc.classids=\'\' OR rc.classids=\'0\' OR find_in_set('.$queryarr['classids'].',rc.classids))';
             }
+        }
+        if(!empty($queryarr['name'])){
+            $wherearr[] = ' c.title like \'%' . Ebh()->db->escape_str($queryarr['name']) . '%\' ';
+        }
+        if(!empty($queryarr['truedatelinefrom']))
+            $wherearr[] = 'c.truedateline>='.$queryarr['truedatelinefrom'];
+        if(!empty($queryarr['truedatelineto']))
+            $wherearr[] = 'c.truedateline<'.$queryarr['truedatelineto'];
+        if(isset($queryarr['power']))
+            $wherearr[] = 'f.power in ('.$queryarr['power'].')';
+        if(!empty($queryarr['folderids']))
+            $wherearr[] = 'rc.folderid in ('.$queryarr['folderids'].')';
+        if (!empty($wherearr))
+            $sql .= ' WHERE ' . implode(' AND ', $wherearr);
+        if (!empty($queryarr['order']))
+            $sql .= ' ORDER BY ' . $queryarr['order'];
+        else
+            $sql .= ' ORDER BY c.cwid DESC ';
+        //  log_message($sql);
+        $res =  $this->db->query($sql)->row_array();
+        if($res){
+            return $res['count'];
+        }
+        return 0;
+    }
+
+    /**
+     * 获取平台最新发布的课件
+     */
+    public function getNewCourseList($queryarr) {
+        $sql = 'SELECT c.cwid,c.title,c.summary,c.viewnum,c.reviewnum,c.dateline,c.logo,u.username,u.realname,c.cwurl,f.foldername,f.folderid,f.coursewarelogo,u.face,u.sex,c.submitat,c.endat,c.ism3u8,c.cwlength,c.truedateline,c.islive,c.uid,c.assistantid FROM ebh_coursewares c ' .
+            'JOIN ebh_roomcourses rc on (c.cwid = rc.cwid) '.
+            'JOIN ebh_users u on (u.uid = c.uid) '.
+            'JOIN ebh_folders f on f.folderid=rc.folderid';
+        $wherearr = array();
+        $wherearr[] = ' c.status != -3 ';
+        if (isset($queryarr['live'])) {
+            $wherearr[] = 'c.islive=1';
+        }
+        if (!empty($queryarr['crid'])) {
+            $wherearr[] = 'rc.crid=' . $queryarr['crid'];
+        }
+        if (!empty($queryarr['status'])) {
+            $wherearr[] = 'c.status = 1';
+        }
+        if (!empty($queryarr['uid'])) {
+            $wherearr[] = 'c.uid=' . $queryarr['uid'];
+        }
+        if(!empty($queryarr['abegindate'])) {
+            $wherearr[] = 'c.dateline>='.$queryarr['abegindate'];
+        }
+        if(!empty($queryarr['aenddate'])) {
+            $wherearr[] = 'c.dateline<'.$queryarr['aenddate'];
+        }
+        if (!empty($queryarr['classids'])) {
+            if (empty($queryarr['classids'])) {
+                $wherearr[] = '(rc.classids=\'\' OR rc.classids=\'0\')';
+            } else {
+                $wherearr[] = '(rc.classids=\'\' OR rc.classids=\'0\' OR find_in_set('.$queryarr['classids'].',rc.classids))';
+            }
+        }
+        if(!empty($queryarr['name'])){
+            $wherearr[] = ' c.title like \'%' . Ebh()->db->escape_str($queryarr['name']) . '%\' ';
         }
         if(!empty($queryarr['truedatelinefrom']))
             $wherearr[] = 'c.truedateline>='.$queryarr['truedatelinefrom'];

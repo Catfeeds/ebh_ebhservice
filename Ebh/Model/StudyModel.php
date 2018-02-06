@@ -99,12 +99,12 @@ class StudyModel
             // cx                     学分总数
             $field  = array(
                 '`u`.`uid`',
-                "SUM(if(`ro`.`folderid`={$params['newlecture']},if(`scl`.`type`=3,`scl`.`score`,0),0)) as `newlecture_comment`",
-                "SUM(if(`ro`.`folderid`={$params['newlecture']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as `newlecture_credit`",
-                "SUM(if(`ro`.`folderid`={$params['newtransaction']},if(`scl`.`type`=3,`scl`.`score`,0),0)) as `newtransaction_comment`",
-                "SUM(if(`ro`.`folderid`={$params['newtransaction']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as `newtransaction_credit`",
-                "SUM(if(`ro`.`folderid`={$params['newregulations']},if(`scl`.`type`=3,`scl`.`score`,0),0)) as `newregulations_comment`",
-                "SUM(if(`ro`.`folderid`={$params['newregulations']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as `newregulations_credit`",
+                "SUM(if(`scl`.`folderid`={$params['newlecture']},if(`scl`.`type`=3,`scl`.`score`,0),0)) as `newlecture_comment`",
+                "SUM(if(`scl`.`folderid`={$params['newlecture']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as `newlecture_credit`",
+                "SUM(if(`scl`.`folderid`={$params['newtransaction']},if(`scl`.`type`=3,`scl`.`score`,0),0)) as `newtransaction_comment`",
+                "SUM(if(`scl`.`folderid`={$params['newtransaction']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as `newtransaction_credit`",
+                "SUM(if(`scl`.`folderid`={$params['newregulations']},if(`scl`.`type`=3,`scl`.`score`,0),0)) as `newregulations_comment`",
+                "SUM(if(`scl`.`folderid`={$params['newregulations']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as `newregulations_credit`",
                 "SUM(if(`scl`.`folderid`=0,if(`scl`.`type`=5,`scl`.`score`,0),0)) as `communication_comment`",
                 "SUM(if(`scl`.`folderid`=0,if(`scl`.`type`=2,`scl`.`score`,0),0)) as `communication_credit`",
 //                "SUM(if(`scl`.`type`=3,1,0)) as cp",
@@ -181,12 +181,55 @@ class StudyModel
      * @param int $crid       当前网校id
      * @return array/null;
      */
-    public function outExclgetCreditCount($params){
-        //组装课程id
-        $folderid = $params['newlecture'] . ',' . $params['newtransaction'] . ',' . $params['newregulations'];
+    public function  outExclgetCreditCount($params){
+       //查询sql
+        $field = array(
+            '`u`.`realname`',
+            '`u`.`username`',
+            '`ca`.`classname`',
+            '`ca`.`path`',
+            '`u`.`uid`'
+        );
 
+        $sql
+            = 'SELECT '.implode(',',$field)." 
+                  
+                 FROM
+                    `ebh_users` `u`
+                LEFT JOIN `ebh_classstudents` `cl` ON `cl`.`uid`=`u`.`uid` 
+                LEFT JOIN `ebh_classes` `ca`  ON `cl`.`classid`=`ca`.`classid`  
 
-        //查询sql
+            
+                WHERE  `ca`.`crid` = {$params['crid']} 
+              
+                  
+                GROUP BY `uid` 
+                ORDER BY 
+                    NULL ";
+        $list  = $this->db->query($sql)->list_array();
+        //获取课程对应的课件id
+        $folderids = $params['newlecture'] . ',' . $params['newtransaction'] . ',' . $params['newregulations'];
+
+       // $s1    = microtime(true);
+        //log_message('查询主数据耗时：'.($s1-$start));
+        //将数据库返回的数据组装成以uid为key的数组
+        $data   = array();
+        $uidStr = '';
+        if ($list) {
+            foreach ($list as $v) {
+                $data[$v['uid']] = $v;
+                $uidStr          .= $v['uid'] . ',';//拼接in 条件字符
+            }
+            $uidStr = rtrim($uidStr,',');
+        } else {
+            return;
+        }
+        //统计学分
+        $where   = [];
+        $where[] = '`crid`=' . $params['crid'];
+        $where[] = '`uid` IN (' . $uidStr . ')';
+        $where[] = '(`dateline` >=' . $params['beginTime'] . ' AND `dateline`<=' . $params['endTime'] . ')';
+        $where[] = '`del`=0';
         //要查询的字段信息（
         // newlecture_comment 讲座学分统计
         // newlecture_credit  讲座评论
@@ -199,59 +242,42 @@ class StudyModel
         // commentScore           得分评论数
         // cx                     学分总数
         // cp                     评论数（占位字段/导出时不用再考虑排序问题）
-
-        $field = array(
-            '`u`.`realname`',
-            '`u`.`username`',
-            '`ca`.`classname`',
-            '`ca`.`path`',
-            'SUM(if(`scl`.`score`>0,`scl`.`score`,0)) as cx',
-            "SUM(if(`ro`.`folderid`={$params['newlecture']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as newlecture_comment",
-            "SUM(if(`ro`.`folderid`={$params['newlecture']},if(`scl`.`type` =3,`scl`.`score`,0),0)) as newlecture_credit",
-            "SUM(if(`ro`.`folderid`={$params['newtransaction']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as newtransaction_comment",
-            "SUM(if(`ro`.`folderid`={$params['newtransaction']},if(`scl`.`type` =3,`scl`.`score`,0),0)) as newtransaction_credit",
-            "SUM(if(`ro`.`folderid`={$params['newregulations']},if(`scl`.`type` in(0,1,4),`scl`.`score`,0),0)) as newregulations_comment",
-            "SUM(if(`ro`.`folderid`={$params['newregulations']},if(`scl`.`type` = 3,`scl`.`score`,0),0)) as newregulations_credit",
-            "SUM(if(`scl`.`folderid`=0,if(`scl`.`type`=2,`scl`.`score`,0),0)) as communication_credit",
-            "SUM(if(`scl`.`folderid`=0,if(`scl`.`type`=5,`scl`.`score`,0),0)) as communication_comment",
+        $creditField = [
+            'SUM(if(`score`>0,`score`,0)) as cx',
+            "SUM(if(`folderid`={$params['newlecture']},if(`type` in(0,1,4),`score`,0),0)) as newlecture_comment",
+            "SUM(if(`folderid`={$params['newlecture']},if(`type` =3,`score`,0),0)) as newlecture_credit",
+            "SUM(if(`folderid`={$params['newtransaction']},if(`type` in(0,1,4),`score`,0),0)) as newtransaction_comment",
+            "SUM(if(`folderid`={$params['newtransaction']},if(`type` =3,`score`,0),0)) as newtransaction_credit",
+            "SUM(if(`folderid`={$params['newregulations']},if(`type` in(0,1,4),`score`,0),0)) as newregulations_comment",
+            "SUM(if(`folderid`={$params['newregulations']},if(`type` = 3,`score`,0),0)) as newregulations_credit",
+            "SUM(if(`folderid`=0,if(`type`=2,`score`,0),0)) as communication_credit",
+            "SUM(if(`folderid`=0,if(`type`=5,`score`,0),0)) as communication_comment",
             '0 as `cp`',
-            "SUM(if(`scl`.`type`=3,if(`scl`.`score`>0,1,0),0)) as commentScore,`u`.`uid`"
-        );
+            "SUM(if(`type`=3,if(`score`>0,1,0),0)) as commentScore",
+            'uid'
+        ];
+        $creditSql   = 'SELECT ' . implode(',', $creditField) . ' FROM ebh_studycreditlogs ';
+        $creditSql   .= ' WHERE ' . implode(' AND ', $where);
+        $creditSql   .= ' GROUP BY uid ORDER BY NULL';
+        //学分获取语句
+        //log_message('学分获取语句：'.$creditSql);
+        $creditList  = $this->db->query($creditSql)->list_array('uid');
 
-        $sql
-            = 'SELECT '.implode(',',$field)." 
-                  
-                 FROM
-                    `ebh_users` `u`
-                LEFT JOIN `ebh_classstudents` `cl` ON `cl`.`uid`=`u`.`uid` 
-                LEFT JOIN `ebh_classes` `ca`  ON `cl`.`classid`=`ca`.`classid`  
-                LEFT JOIN `ebh_studycreditlogs` `scl` ON `scl`.`uid`=`u`.`uid` AND  (`scl`.`dateline` >=' {$params['beginTime']} ' AND  `scl`.`dateline` <= {$params['endTime']})  AND `scl`.`del`=0 AND `scl`.`crid`= {$params['crid']} 
-                LEFT JOIN `ebh_roomcourses` `ro` ON `ro`.`cwid`=`scl`.`cwid`  AND (`ro`.`folderid` in({$folderid}) OR `scl`.`type` in(2,5)) AND `ca`.`crid`={$params['crid']} 
-                LEFT JOIN `ebh_coursewares` `cw` ON `scl`.`cwid` = `cw`.`cwid`
-            
-                WHERE  `ca`.`crid` = {$params['crid']} 
-              
-                  
-                GROUP BY `uid` 
-                ORDER BY 
-                    NULL ";
-        //log_message($sql);
-        //$start = microtime(true);
-        $list  = $this->db->query($sql)->list_array();
-       // $s1    = microtime(true);
-        //log_message('查询主数据耗时：'.($s1-$start));
-        //将数据库返回的数据组装成以uid为key的数组
-        $data   = array();
-        $uidStr = '';
-        if ($list) {
-            foreach ($list as $v) {
-                $data[$v['uid']] = $v;
-                $uidStr          .= $v['uid'] . ',';//拼接in 条件字符
-            }
-            $uidArr = trim($uidStr, ',');//去掉首尾,号
-        } else {
-            return;
+        foreach ($data as $uid => $item) {
+            $data[$uid]['countCredit']            = 0;
+            $data[$uid]['cx']                     = isset($creditList[$uid]['cx']) && $creditList[$uid]['cx'] > 0 ? $creditList[$uid]['cx'] : 0;
+            $data[$uid]['newlecture_comment']     = isset($creditList[$uid]['newlecture_comment']) && $creditList[$uid]['newlecture_comment'] > 0 ? $creditList[$uid]['newlecture_comment'] : 0;
+            $data[$uid]['newlecture_credit']      = isset($creditList[$uid]['newlecture_credit']) && $creditList[$uid]['newlecture_credit'] > 0 ? $creditList[$uid]['newlecture_credit'] : 0;
+            $data[$uid]['newtransaction_comment'] = isset($creditList[$uid]['newtransaction_comment']) && $creditList[$uid]['newtransaction_comment'] > 0 ? $creditList[$uid]['newtransaction_comment'] : 0;
+            $data[$uid]['newtransaction_credit']  = isset($creditList[$uid]['newtransaction_credit']) && $creditList[$uid]['newtransaction_credit'] > 0 ? $creditList[$uid]['newtransaction_credit'] : 0;
+            $data[$uid]['newregulations_comment'] = isset($creditList[$uid]['newregulations_comment']) && $creditList[$uid]['newregulations_comment'] > 0 ? $creditList[$uid]['newregulations_comment'] : 0;
+            $data[$uid]['newregulations_credit']  = isset($creditList[$uid]['newregulations_credit']) && $creditList[$uid]['newregulations_credit'] > 0 ? $creditList[$uid]['newregulations_credit'] : 0;
+            $data[$uid]['communication_credit']   = isset($creditList[$uid]['communication_credit']) && $creditList[$uid]['communication_credit'] > 0 ? $creditList[$uid]['communication_credit'] : 0;
+            $data[$uid]['communication_comment']  = isset($creditList[$uid]['communication_comment']) && $creditList[$uid]['communication_comment'] > 0 ? $creditList[$uid]['communication_comment'] : 0;
+            $data[$uid]['cp']                     = 0;
+            $data[$uid]['commentScore']           = isset($creditList[$uid]['commentScore']) && $creditList[$uid]['commentScore'] > 0 ? $creditList[$uid]['commentScore'] : 0;
         }
+
         //统计评论
         //log_message(json_encode($data, JSON_UNESCAPED_UNICODE));
         $field = array(
@@ -259,9 +285,10 @@ class StudyModel
             'COUNT(*) as `cp`',
 
         );
+
         $where = ' (`r`.`dateline` >=' . $params['beginTime'] . ' AND `r`.`dateline` <=' . $params['endTime'] . ') AND `r`.`crid`=' . $params['crid'];
 
-        $where .= ' AND `r`.`uid` IN (' . $uidArr . ')';
+        $where .= ' AND `r`.`uid` IN (' . $uidStr . ')';
         //评论统计
         $sql = 'SELECT ' . implode(',', $field) .
             ' FROM `ebh_reviews` `r`  WHERE ' . $where . '  GROUP BY `uid` ORDER BY NULL';

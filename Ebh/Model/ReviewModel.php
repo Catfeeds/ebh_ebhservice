@@ -111,9 +111,24 @@ class ReviewModel {
         if (isset($filters['audit'])) {
             $whereArr[] = '`a`.`audit`='.intval($filters['audit']);
         }
-        $sql = 'SELECT COUNT(`a`.`toid`) AS `c` ,folderid,`a`.`audit` FROM `ebh_reviews` `a` LEFT JOIN `ebh_roomcourses` `b` ON `a`.`toid`=`b`.`cwid` left join ebh_coursewares c on `c`.`cwid`=`b`.`cwid`'.
-            ' WHERE '.implode(' AND ', $whereArr);
-        
+        if (isset($filters['classids'])) {
+            if (isset($filters['roomtype']) && $filters['roomtype'] == 'com' && count($filters['classids']) == 1) {
+                $classid = reset($filters['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return 0;
+                }
+                $whereArr[] = '`e`.`lft`>='.$class['lft'];
+                $whereArr[] = '`e`.`rgt`<='.$class['rgt'];
+            } else {
+                $whereArr[] = '`d`.`classid` IN('.implode(',', $filters['classids']).')';
+            }
+            $sql = 'SELECT COUNT(`a`.`toid`) AS `c` ,folderid,`a`.`audit` FROM `ebh_reviews` `a` JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid` JOIN `ebh_classes` `e` ON `e`.`classid`=`d`.`classid` AND `e`.`crid`=`a`.`crid` LEFT JOIN `ebh_roomcourses` `b` ON `a`.`toid`=`b`.`cwid` left join ebh_coursewares c on `c`.`cwid`=`b`.`cwid`'.
+                ' WHERE '.implode(' AND ', $whereArr);
+        } else {
+            $sql = 'SELECT COUNT(`a`.`toid`) AS `c` ,folderid,`a`.`audit` FROM `ebh_reviews` `a` LEFT JOIN `ebh_roomcourses` `b` ON `a`.`toid`=`b`.`cwid` left join ebh_coursewares c on `c`.`cwid`=`b`.`cwid`'.
+                ' WHERE '.implode(' AND ', $whereArr);
+        }
 		if(!$bylist){
 			$ret = Ebh()->db->query($sql)->row_array();
 			if (!empty($ret)) {
@@ -183,11 +198,28 @@ class ReviewModel {
                 $pagesize = max(1, intval($limits));
             }
         }
-        $sql = 'SELECT `a`.`logid`,`a`.`audit`,`a`.`toid`,`a`.`subject`,`a`.`uid`,`a`.`dateline`,`a`.`shield`,`b`.`folderid`'.
-            ' FROM `ebh_reviews` `a` LEFT JOIN `ebh_roomcourses` `b` ON `a`.`toid`=`b`.`cwid` left join ebh_coursewares c on c.cwid=b.cwid'.
-            ' WHERE '.implode(' AND ', $whereArr).
-            ' ORDER BY `a`.`logid` DESC LIMIT '.$offset.','.$pagesize;
-
+        if (!empty($filters['classids'])) {
+            if (isset($filters['roomtype']) && $filters['roomtype'] == 'com' && count($filters['classids']) == 1) {
+                $classid = reset($filters['classids']);
+                $class = Ebh()->db->query('SELECT `lft`,`rgt` FROM `ebh_classes` WHERE `classid`='.$classid)->row_array();
+                if (empty($class)) {
+                    return array();
+                }
+                $whereArr[] = '`e`.`lft`>='.$class['lft'];
+                $whereArr[] = '`e`.`rgt`<='.$class['rgt'];
+            } else {
+                $whereArr[] = '`d`.`classid` IN('.implode(',', $filters['classids']).')';
+            }
+            $sql = 'SELECT `a`.`logid`,`a`.`audit`,`a`.`toid`,`a`.`subject`,`a`.`uid`,`a`.`dateline`,`a`.`shield`,`b`.`folderid`'.
+                ' FROM `ebh_reviews` `a` JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid` JOIN `ebh_classes` `e` ON `e`.`classid`=`d`.`classid` AND `e`.`crid`=`a`.`crid` LEFT JOIN `ebh_roomcourses` `b` ON `a`.`toid`=`b`.`cwid` left join ebh_coursewares c on c.cwid=b.cwid'.
+                ' WHERE '.implode(' AND ', $whereArr).
+                ' ORDER BY `a`.`logid` DESC LIMIT '.$offset.','.$pagesize;
+        } else {
+            $sql = 'SELECT `a`.`logid`,`a`.`audit`,`a`.`toid`,`a`.`subject`,`a`.`uid`,`a`.`dateline`,`a`.`shield`,`b`.`folderid`'.
+                ' FROM `ebh_reviews` `a` LEFT JOIN `ebh_roomcourses` `b` ON `a`.`toid`=`b`.`cwid` left join ebh_coursewares c on c.cwid=b.cwid'.
+                ' WHERE '.implode(' AND ', $whereArr).
+                ' ORDER BY `a`.`logid` DESC LIMIT '.$offset.','.$pagesize;
+        }
         if ($setKey) {
             return Ebh()->db->query($sql)->list_array('logid');
         }

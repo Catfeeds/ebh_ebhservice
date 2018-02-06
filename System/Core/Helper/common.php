@@ -5,7 +5,24 @@
  * @time 2017年3月18日16:22:40
  * 
  */
+/**
+ * @describe:
+ * @User:tzq
+ * @Date:${DATE}
+ * @param $msg
+ * @param string $level
+ * @param bool $php_erro
+ */
+function dump($data){
 
+    echo '<pre>';
+
+    var_dump($data?$data:'NULL');
+
+
+
+    echo '<pre>';
+}
 /**
  * 执行其他控制器
  *

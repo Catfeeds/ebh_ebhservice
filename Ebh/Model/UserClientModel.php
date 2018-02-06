@@ -41,6 +41,10 @@ class UserClientModel {
             $setarr['lasttime'] = $param['lasttime'];
         if(!empty($param['isext']))
             $setarr['isext'] = $param['isext'];
+		if(!empty($param['mac']))
+            $setarr['mac'] = $param['mac'];
+		if(!empty($param['extradata']))
+            $setarr['extradata'] = $param['extradata'];
         if(empty($setarr))
             return FALSE;
         $clientid = Ebh()->db->insert('ebh_userclients',$setarr);
@@ -53,6 +57,18 @@ class UserClientModel {
     public function getClientsByUid($uid,$crid) {
         $sql = "select clientid,crid,ismobile,system,browser,broversion,screen,ip,dateline,lasttime,isext,vendor from ebh_userclients where uid=$uid and crid=$crid";
         return Ebh()->db->query($sql)->list_array();
+    }
+	
+	/**
+     * 根据用户编号获取用户设备绑定数量
+     * @param int $uid 用户uid
+     * @param int $crid 网校id
+     */
+    public function getClientCountByUid($uid,$crid,$mac,$system) {
+		
+        $sql = "select count(*) count,count(case when mac='$mac' then 1 end) countreg from ebh_userclients where uid=$uid and crid=$crid";
+        $count = Ebh()->db->query($sql)->row_array();
+		return $count;
     }
     /**
      * 登录限制列表

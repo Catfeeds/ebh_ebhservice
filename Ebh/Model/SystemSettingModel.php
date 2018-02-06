@@ -106,6 +106,15 @@ class SystemSettingModel
         if (isset($update_params['isbanregister'])) {
             $params['isbanregister'] = intval($update_params['isbanregister']);
         }
+        if (isset($update_params['isbanthirdlogin'])) {
+            $params['isbanthirdlogin'] = intval($update_params['isbanthirdlogin']);
+        }
+        if (isset($update_params['isdepartment'])) {
+            $params['isdepartment'] = intval($update_params['isdepartment']);
+        }
+		if (isset($update_params['cwlistonlyself'])) {
+            $params['cwlistonlyself'] = intval($update_params['cwlistonlyself']);
+        }
         if (empty($update_params)) {
             return 0;
         }
@@ -180,6 +189,15 @@ class SystemSettingModel
         if (isset($update_params['isbanregister'])) {
             $params['isbanregister'] = intval($update_params['isbanregister']);
         }
+        if (isset($update_params['isbanthirdlogin'])) {
+            $params['isbanthirdlogin'] = intval($update_params['isbanthirdlogin']);
+        }
+        if (isset($update_params['isdepartment'])) {
+            $params['isdepartment'] = intval($update_params['isdepartment']);
+        }
+		if (isset($update_params['cwlistonlyself'])) {
+            $params['cwlistonlyself'] = intval($update_params['cwlistonlyself']);
+        }
         $params['crid'] = intval($crid);
         return $this->db->insert('ebh_systemsettings', $params);
     }
@@ -191,7 +209,7 @@ class SystemSettingModel
      */
     public function getOtherSetting($crid) {
         $crid = (int) $crid;
-        $sql = "SELECT `isbanbuy`,`isbanregister`,`refuse_stranger`,`mobile_register`,`review_interval`,`post_interval`,`limitnum`,`creditrule`,`showlink`,`showmodule`,`ebhbrowser` 
+        $sql = "SELECT `isbanbuy`,`isbanregister`,`isbanthirdlogin`,`isdepartment`,`refuse_stranger`,`mobile_register`,`review_interval`,`post_interval`,`limitnum`,`creditrule`,`showlink`,`showmodule`,`ebhbrowser` ,`cwlistonlyself`
                 FROM `ebh_systemsettings` 
                 WHERE `crid`=$crid LIMIT 1";
         return $this->db->query($sql)->row_array();

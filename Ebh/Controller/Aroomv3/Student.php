@@ -19,7 +19,8 @@ class StudentController extends Controller{
                 'classid'  =>  array('name'=>'classid','default'=>0,'type'=>'int'),
                 'pagesize'  =>  array('name'=>'pagesize','type'=>'int','default'=>getConfig('system.page.listRows')),
                 'isenterprise' => array('name'=>'isenterprise','type'=>'int','default' => 0),
-                'issimple' => array('name' => 'issimple', 'type' => 'int', 'default' => 0)
+                'issimple' => array('name' => 'issimple', 'type' => 'int', 'default' => 0),
+                'uid' => array('name' => 'uid', 'type' => 'int', 'default' => 0)
             ),
             'detailAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
@@ -96,6 +97,12 @@ class StudentController extends Controller{
                 'communication'=>array('name'=>'communication','type'=>'int','require'=>true),
                 'crid'=>array('name'=>'crid','type'=>'int','require'=>true),
 
+            )   , 'getCreditListAction'=>array(
+                'beginTime'=>array('name'=>'beginTime','type'=>'int'),
+                'endTime'=>array('name'=>'endTime','type'=>'int'),
+                'crid'=>array('name'=>'crid','type'=>'int','require'=>true),
+                'uids'=>array('name'=>'uids','type'=>'string','require'=>true)
+
             )
         );
     }
@@ -169,8 +176,53 @@ class StudentController extends Controller{
             $parameters['q'] = $this->q;
         }
         $parameters['isEnterprise'] = $this->isenterprise;
+
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array();
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                if ($this->isenterprise == 1) {
+                    $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                    if (empty($teacherDepts)) {
+                        return array();
+                    }
+                    $parents = array();
+                    while ($parent = array_shift($teacherDepts)) {
+                        $parents[] = $parent;
+                        $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                            return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                        });
+                    }
+                    $classes = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                } else {
+                    $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
+                }
+                if (empty($classes)) {
+                    return array();
+                }
+            }
+        }
+
         if($this->classid > 0){
-            if ($parameters['isEnterprise'] == 1) {
+            if (!empty($classes) && !isset($classes[$this->classid])) {
+                return array(
+                    'total' =>  0,
+                    'list'  =>  array(),
+                    'nowPage'   =>  1,
+                    'totalPage' =>  0
+                );
+            }
+            if (isset($classes[$this->classid]['lft'])) {
+                $parameters['lft'] = $classes[$this->classid]['lft'];
+                $parameters['rgt'] = $classes[$this->classid]['rgt'];
+            } else if ($parameters['isEnterprise'] == 1) {
                 $classModel = new ClassesModel();
                 $dept = $classModel->getDept($this->classid, $this->crid);
                 if (empty($dept)) {
@@ -189,7 +241,9 @@ class StudentController extends Controller{
                 $parameters['classid']  = $this->classid;
             }
         }
-
+        if (empty($this->classid) && !empty($classes)) {
+            $parameters['classids'] = array_keys($classes);
+        }
 
         $total = $this->roomUserModel->getStudentCount($parameters);
         $pageClass  = new Page($total,$this->pagesize);
@@ -381,7 +435,37 @@ class StudentController extends Controller{
             return $list;
         }
         $list = $model->outExclgetCreditCount($params);
-        Ebh()->cache->set($cacheKey, $list, 300);
+       Ebh()->cache->set($cacheKey, $list, 300);
         return $list;
+    }
+
+    /**
+     * @describe:获取一个或多个学生的时间区间学分列表
+     * @Author:tzq
+     * @Date:2018/01/13
+     * @param int $beginTime
+     * @param int $endTime
+     * @param int $crid
+     * @param string $uids
+     * @return array
+     */
+    public function getCreditListAction(){
+        $crid      = intval($this->crid);
+        $uids      = $this->uids;
+        $beginTime = intval($this->beginTime);
+        $endTime   = intval($this->endTime);
+        //验证uid的数据是否合法
+//        if (!preg_match('/^((\d,?)*)\d$/', $uids)) {
+//            return false;
+//        }
+        $param              = [];
+        $param['crid']      = $crid;
+        $param['uids']      = $uids;
+        $param['beginTime'] = $beginTime;
+        $param['endTime']   = $endTime;
+
+        $studyMolde = new StudycreditlogsModel();//获取学分的模型
+        $ret        = $studyMolde->getCreditList($param);
+        return $ret;
     }
 }

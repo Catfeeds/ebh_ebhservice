@@ -26,7 +26,7 @@ class TeacherRoleModel{
         if ($simple) {
             $fields = array('rid', 'rolename');
         } else {
-            $fields = array('rid', 'rolename', 'category', 'remark', 'permissions');
+            $fields = array('rid', 'rolename', 'category', 'remark', 'permissions', 'limitscope');
         }
         $sql = 'SELECT '.implode(',', $fields).' FROM `ebh_teacher_roles` WHERE `crid`='.$crid.' AND `category`>0 ORDER BY `rid` DESC';
         if ($page > 0) {
@@ -64,6 +64,7 @@ class TeacherRoleModel{
             'category' => intval($params['category']),
             'rolename' => trim($params['rolename']),
             'remark' => isset($params['remark']) ? trim($params['remark']) : '',
+            'limitscope' => isset($params['limitscope']) ? intval($params['limitscope']) : 0,
             'permissions' => '',
             'dateline' => SYSTIME
         );
@@ -104,6 +105,9 @@ class TeacherRoleModel{
         }
         if (isset($params['remark'])) {
             $sets['remark'] = trim($params['remark']);
+        }
+        if (isset($params['limitscope'])) {
+            $sets['limitscope'] = intval($params['limitscope']);
         }
         if (isset($params['permissions'])) {
             if (is_array($params['permissions'])) {
@@ -292,7 +296,7 @@ class TeacherRoleModel{
     public function getTeacherRole($tid, $crid) {
         $tid = intval($tid);
         $crid = intval($crid);
-        $sql = 'SELECT `a`.`role`,`b`.`rolename`,`a`.`status`,IFNULL(`b`.`rid`,0) AS `rid`,`b`.`permissions`,`b`.`category` FROM `ebh_roomteachers` `a` LEFT JOIN `ebh_teacher_roles` `b` ON `b`.`rid`=`a`.`role` AND `b`.`crid`=`a`.`crid` WHERE `a`.`tid`='.$tid.' AND `a`.`crid`='.$crid;
+        $sql = 'SELECT `a`.`role`,`b`.`rolename`,`a`.`status`,IFNULL(`b`.`rid`,0) AS `rid`,`b`.`permissions`,`b`.`category`,`b`.`limitscope` FROM `ebh_roomteachers` `a` LEFT JOIN `ebh_teacher_roles` `b` ON `b`.`rid`=`a`.`role` AND `b`.`crid`=`a`.`crid` WHERE `a`.`tid`='.$tid.' AND `a`.`crid`='.$crid;
         $ret = Ebh()->db->query($sql)->row_array();
         if (empty($ret)) {
             return 0;

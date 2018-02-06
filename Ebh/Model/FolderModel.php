@@ -2618,6 +2618,7 @@ class FolderModel{
             '`logs`.`ip`',//注册ip
         ];
         $where[] = '`us`.`folderid`=' . $params['folderid'];//筛选课程
+        $where[] = '`us`.`crid`=' . $params['crid'];//筛选课程
         //$where[] = '`cr`.`crid`=' . $params['crid'];//筛选当前网校的积分
         $having  = ' HAVING `logs`.`logid`=`lid`';//筛选第一次记录
         //获取学生信息
@@ -2828,7 +2829,7 @@ GROUP BY uid';
 
         $cwcredit          = $this->db->query($sql)->row_array();//获取课程学分，单独获取避免重复
         //获取学习次数
-        $sql        = 'SELECT COUNT(*) as `count` FROM `ebh_playlogs` WHERE `totalflag`=0  AND `folderid`='.$params['folderid'];
+        $sql        = 'SELECT COUNT(*) as `count` FROM `ebh_playlogs` WHERE `totalflag`=0  AND `folderid`='.$params['folderid'].' AND `crid`='.$params['crid'];
         $creditnum  = $this->db->query($sql)->row_array();
 
         //$data['courseNum'] = isset($cwcredit['coursewarenum']) ? $cwcredit['coursewarenum'] : 0;

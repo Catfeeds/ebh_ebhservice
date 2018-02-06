@@ -35,6 +35,11 @@ class SectionController extends Controller{
 				'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
 				'sid'  =>  array('name'=>'sid','require'=>true,'type'=>'int'),
 			),
+			'updateOrderAction' => array(
+				'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
+				'sid'  =>  array('name'=>'sid','require'=>true,'type'=>'int'),
+				'displayorder' => array('name'=>'displayorder','require'=>true,'type'=>'int')
+			)
 			
 		);
 	}
@@ -74,6 +79,17 @@ class SectionController extends Controller{
 		} else {
 			$res = $this->sectionmodel->changeOrder($param);
 		}
+		return $res;
+	}
+	
+	/*
+	 * 直接输入排序号修改
+	*/
+	public function updateOrderAction(){
+		$param['crid'] = $this->crid;
+		$param['sid'] = $this->sid;
+		$param['displayorder'] = $this->displayorder;
+		$res = $this->sectionmodel->updateOrder($param);
 		return $res;
 	}
 	

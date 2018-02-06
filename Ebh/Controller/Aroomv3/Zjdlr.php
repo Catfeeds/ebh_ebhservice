@@ -1,17 +1,20 @@
 <?php
 
 /**
+ * 国土接口
  * Created by PhpStorm.
- * User: app
- * Date: 2017/3/23
- * Time: 16:49
+ * User: ycq
+ * Date: 2018/1/27
+ * Time: 14:28
  */
-class AskQuestionController extends Controller {
+class ZjdlrController extends Controller
+{
     public function __construct()
     {
         parent::init();
     }
-    public function parameterRules() {
+    public function parameterRules()
+    {
         return array(
             //问题列表
             'askQuestionListAction' => array(
@@ -105,32 +108,6 @@ class AskQuestionController extends Controller {
                     'name' => 'roomtype',
                     'type' => 'string',
                     'default' => 'edu'
-                )
-            ),
-            //设置屏蔽状态
-            'setShieldAction' => array(
-                'qid' => array(
-                    'name' => 'qid',
-                    'type' => 'int',
-                    'require' => true
-                ),
-                'crid' => array(
-                    'name' => 'crid',
-                    'type' => 'int',
-                    'require' => true
-                ),
-                'shield' => array(
-                    'name' => 'shield',
-                    'type' => 'int',
-                    'require' => true
-                )
-            ),
-            //根据qid获取问题详情
-            'getAskByQidAction' => array(
-                'qid' => array(
-                    'name' => 'qid',
-                    'type' => 'int',
-                    'require' => true
                 )
             )
         );
@@ -237,7 +214,7 @@ class AskQuestionController extends Controller {
                 if (!empty($imageSrc)) {
                     $imageSrcArr = explode(',', $imageSrc);
                     $imageSrcArr = array_filter($imageSrcArr, function($src) {
-                       return !empty($src);
+                        return !empty($src);
                     });
                     $imageNameArr = explode(',', $imageName);
                     $images = array();
@@ -327,24 +304,5 @@ class AskQuestionController extends Controller {
             $filters['classids'] = array($this->classid);
         }
         return $model->getCount($this->crid, $filters);
-    }
-
-    /**
-     * 设置屏蔽状态
-     */
-    public function setShieldAction() {
-        $model = new AskQuestionModel();
-        $shield = $this->shield == 0 ? 0 : 1;
-        return $model->setShield($this->qid, $this->crid, $shield);
-    }
-    /**
-     * 根据qid获取问题详情
-     */
-    public function getAskByQidAction() {
-        $filters = array();
-        $model = new AskQuestionModel();
-        $filters['qid'] = $this->qid;
-        $filters['changestatus'] = 1;   //等于1，获取的问题详情时，去除当前问题shield状态是否为0的判断
-        return $model->detail($filters);
     }
 }

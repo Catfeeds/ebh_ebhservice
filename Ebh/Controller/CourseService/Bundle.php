@@ -393,10 +393,11 @@ class BundleController extends Controller {
         }
         //验证课程服务项的有效性
         $payItemModel = new PayitemModel();
-        $itemids = $payItemModel->checkIds($itemids, $this->crid);
-        if (empty($itemids)) {
+        $validItemids = $payItemModel->checkIds($itemids, $this->crid);
+        if (empty($validItemids)) {
             return false;
         }
+        $itemids = array_intersect($itemids, $validItemids);
         $params = array(
             'name' => $this->name,
             'remark' => $this->remark,

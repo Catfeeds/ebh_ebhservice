@@ -667,7 +667,7 @@ class PlayLogModel {
         $where[] = '`uid`=' . $uid;
         $where[] = '`cwid` IN(' . $cwids . ')';
         $where[] = '`totalflag`=0';
-        $field = ['`cwid`,`folderid`'];
+        $field = ['`cwid`,`folderid`','`finished`'];
         if($isCount){
             array_push($field,'SUM(`ltime`)  `totalltime`');
         }

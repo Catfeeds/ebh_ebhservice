@@ -86,11 +86,13 @@ class ClasscourseModel{
 	/*
 	 *根据classid获取已选的数量
 	*/
-	public function getFolderidCountByClassid($classid){
+	public function getFolderidCountByClassid($classid,$crid){
 		if(empty($classid)){
 			return array();
 		}
-		$sql = 'select count(*) count,classid from `ebh_classcourses` where classid in ('.$classid.') group by classid';
+		$sql = 'select count(*) count,classid from `ebh_classcourses` c join
+				ebh_folders f on c.folderid=f.folderid
+				where classid in ('.$classid.') and crid='.$crid.' group by classid';
 		return Ebh()->db->query($sql)->list_array('classid');
 	}
 	/*

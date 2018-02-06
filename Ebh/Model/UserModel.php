@@ -62,6 +62,8 @@ class UserModel{
             $userarr['lastloginip'] = $param['lastloginip'];
         if(isset($param['allowip']))
             $userarr['allowip'] = $param['allowip'];
+		if(isset($param['schoolname']))
+            $userarr['schoolname'] = $param['schoolname'];
         $sarr = array();
         if(isset($param['logincount']))
             $sarr['logincount'] = 'logincount+1';

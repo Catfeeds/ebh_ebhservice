@@ -102,16 +102,16 @@ class DesignModel{
         if(!empty($param['roomtype'])){
             $setarr['roomtype'] = $param['roomtype'];
         }
-        if(!empty($param['head'])){
+        if(isset($param['head'])){
             $setarr['head'] = $this->db->escape_str($param['head']);
         }
-        if(!empty($param['foot'])){
+        if(isset($param['foot'])){
             $setarr['foot'] = $this->db->escape_str($param['foot']);
         }
-        if(!empty($param['body'])){
+        if(isset($param['body'])){
             $setarr['body'] = $this->db->escape_str($param['body']);
         }
-        if(!empty($param['settings'])){
+        if(isset($param['settings'])){
             $setarr['settings'] = $this->db->escape_str($param['settings']);
         }
         if(isset($param['uid'])){

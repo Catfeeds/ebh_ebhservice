@@ -35,4 +35,39 @@ class RoomCourseModel{
         $sql = 'SELECT `a`.`isfree`,`b`.`cwid`,`b`.`logo`,`b`.`thumb`,`b`.`cwurl`,`b`.`cwsize`,`b`.`summary` FROM `ebh_roomcourses` `a` JOIN `ebh_coursewares` `b` ON `b`.`cwid`=`a`.`cwid` WHERE '.implode(' AND ', $wheres);
         return Ebh()->db->query($sql)->row_array();
     }
+    /**
+     * @describe:用课程id获取课件列表
+     * @Author:tzq
+     * @Date:2018/01/09
+     * @param string $folderids 课程id，多个逗号隔开
+     * @return  array
+     */
+    public function getCwList($param){
+        if(empty($param['folderids']))
+            return false;
+        $where = [];
+        $where[] = '`folderid` IN('.$param['folderids'].')';
+        if(!empty($param['crid'])){
+            $where[] = '`crid`='.$param['crid'];
+        }
+        $sql = 'SELECT `cwid`,`folderid` FROM `ebh_roomcourses` ';
+        $sql .= 'WHERE '.implode(' AND ',$where);
+        return Ebh()->db->query($sql)->list_array();
+    }
+
+    /**
+     * @describe:用课件id获取课程id
+     * @Author:tzq
+     * @Date:2018/01/10
+     * @param int $cwid 课程id
+     * @return int 课程Id
+     */
+    public function getFoderid($cwid){
+      if(empty($cwid)){
+          return 0;
+      }
+      $sql = 'SELECT `folderid` FROM `ebh_roomcourses` where `cwid`='.$cwid.' limit 1';
+      $ret =  Ebh()->db->query($sql)->row_array('folderid');
+      return isset($ret['folderid'])&& $ret['folderid']>0?$ret['folderid']:0;
+    }
 }

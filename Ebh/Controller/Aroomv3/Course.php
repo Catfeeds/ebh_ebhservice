@@ -518,7 +518,7 @@ class CourseController extends Controller{
                     $condition['sid'] = intval($roominfo['sid']);
                 }
             }
-            $courselist = $foldermodel->getFolderWithItem($crid, $condition);
+            $courselist = $foldermodel->getFolderWithItem($crid, $condition, $param);
             $coursecount = $foldermodel->getFolderCountWithItem($crid, $condition);
 
         } else {

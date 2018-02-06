@@ -123,13 +123,16 @@ class LogTaskController extends Controller{
 		//记录添加成功时，更新学习时长缓存
 		if($addresult !== FALSE){
 			$uslib = new UserStudyInfo();
-			$scoresum = $uslib->getCache($crid,$uid);
-			if(empty($scoresum)){//没缓存则获取数据库，但排除当前的logid，以免数据库更新不及时
-				$scoresum = runAction('Classroom/Score/getUserSum',array('uid'=>$uid,'crid'=>$crid,'exceptlogid_p'=>$addresult));
-			}
+			// $scoresum = $uslib->getCache($crid,$uid);
+			// if(empty($scoresum)){//没缓存则获取数据库，但排除当前的logid，以免数据库更新不及时
+				// $scoresum = runAction('Classroom/Score/getUserSum',array('uid'=>$uid,'crid'=>$crid,'exceptlogid_p'=>$addresult));
+			// }
 			//缓存更新加上当前的学习时间
-			$newltime = $scoresum['ltime'] + $logForm['ltime'];
-			$uslib->setCache($crid,$uid,array('scoresum'=>$scoresum['scoresum'],'ltime'=>$newltime));
+			// $newltime = $scoresum['ltime'] + $logForm['ltime'];
+			// $uslib->setCache($crid,$uid,array('scoresum'=>$scoresum['scoresum'],'ltime'=>$newltime));
+			
+			//清除缓存
+			$uslib->clearCache($crid,$uid);
 		}
 		
         $totalresult = $logmodel->addTotalLog($logForm,$ismeger);

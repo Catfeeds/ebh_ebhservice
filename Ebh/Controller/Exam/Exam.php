@@ -27,7 +27,12 @@ class ExamController extends Controller{
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int'),
                 'upanswer'  =>  array('name'=>'upanswer','require'=>true,'type'=>'string')
             ),
-            
+			'updateAidAction' => array(
+				'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int'),
+				'aid'  =>  array('name'=>'aid','require'=>true,'type'=>'int'),
+				'cwidlist'  =>  array('name'=>'cwidlist','require'=>true,'type'=>'array'),
+				'qidlist'  =>  array('name'=>'qidlist','require'=>true,'type'=>'array'),
+			)
         );
     }
 
@@ -56,6 +61,12 @@ class ExamController extends Controller{
 		$scwmodel = new SchcoursewareModel();
 		return $scwmodel->delUpanswer(array('qid'=>$this->qid,'cwid'=>$this->cwid,'uid'=>$this->uid,'upanswer'=>$this->upanswer));
 	}
-
-
+	
+	/*
+	主观题更新aid，wap提交作业用到
+	*/
+	public function updateAidAction(){
+		$scwmodel = new SchcoursewareModel();
+		return $scwmodel->updateaid(array('uid'=>$this->uid,'aid'=>$this->aid,'cwidlist'=>$this->cwidlist,'qidlist'=>$this->qidlist));
+	}
 }

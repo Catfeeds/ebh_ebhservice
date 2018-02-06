@@ -33,7 +33,7 @@ class SmsUtil{
         $mobile = implode(',',$mobile);
         $request = new AlibabaAliqinFcSmsNumSendRequest;
         $request->setSmsType('normal');
-        $request->setSmsFreeSignName(Ebh()->config->get('sms.alidayu.sign'));
+        $request->setSmsFreeSignName('网络学校');
         //$request->setSmsParam("{\"name\":\"".$name."\",\"time\":\"".$time."\",\"coursename\":\"".$coursename."\"}");
         $request->setSmsParam("{\"code\":\"".$code."\",\"time\":\"".$time."\",\"coursename\":\"".$coursename."\"}");
         $request->setRecNum($mobile);

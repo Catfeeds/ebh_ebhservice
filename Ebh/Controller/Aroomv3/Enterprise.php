@@ -29,6 +29,11 @@ class EnterpriseController extends Controller {
                     'name' => 'show_teachers',
                     'require' => false,
                     'type' => 'int'
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
                 )
             ),
             //添加部门
@@ -59,8 +64,37 @@ class EnterpriseController extends Controller {
                 //部门编号
                 'code' => array(
                     'name' => 'code',
-                    'require' => false,
+                    'type' => 'string',
+                    'default' => ''
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
+                )
+            ),
+            //导入部门
+            'importDeptmentsAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'require' => true,
                     'type' => 'int'
+                ),
+                //上级部门ID
+                'superiorid' => array(
+                    'name' => 'superiorid',
+                    'require' => true,
+                    'type' => 'int'
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'deptments' => array(
+                    'name' => 'deptments',
+                    'type' => 'array',
+                    'require' => true
                 )
             ),
             //修改部门
@@ -92,7 +126,7 @@ class EnterpriseController extends Controller {
                 'code' => array(
                     'name' => 'code',
                     'require' => false,
-                    'type' => 'int'
+                    'type' => 'string'
                 )
             ),
             //删除部门
@@ -162,6 +196,11 @@ class EnterpriseController extends Controller {
                     'require' => true,
                     'type' => 'string'
                 ),
+                'crid' => array(
+                    'name' => 'crid',
+                    'require' => true,
+                    'type' => 'string'
+                )
             ),
 			//子部门
 			'subDepartmentAction' =>array(
@@ -281,98 +320,245 @@ class EnterpriseController extends Controller {
 				'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
 				'classid'  =>  array('name'=>'classid','require'=>TRUE,'type'=>'int'),
 			),
+            'getDeptListAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'deptName' => array(
+                    'name' => 'deptName',
+                    'type' => 'string',
+                    'default' => ''
+                ),
+                'number' => array(
+                    'name' => 'number',
+                    'type' => 'int',
+                    'default' => 0
+                )
+            ),
+            'verifyAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'deptName' => array(
+                    'name' => 'deptName',
+                    'type' => 'string',
+                    'require' => true
+                ),
+                'code' => array(
+                    'name' => 'code',
+                    'type' => 'string',
+                    'require' => true
+                )
+            ),
+            'importDeptmentsAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                //上级部门ID
+                'superiorId' => array(
+                    'name' => 'superiorId',
+                    'require' => true,
+                    'type' => 'int'
+                ),
+                //批量部门数据
+                'deptments' => array(
+                    'name' => 'deptments',
+                    'require' => true,
+                    'type' => 'string'
+                )
+            ),
+            'resetDeptAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'crname' => array(
+                    'name' => 'crname',
+                    'type' => 'string',
+                    'require' => true
+                )
+            )
         );
     }
 
     public function indexAction() {
         $showTeachers = !empty($this->show_teachers);
+        if ($this->uid > 0) {
+            //非网校管理员用户，读取权限范围
+            $teacherroleModel = new TeacherRoleModel();
+            $role = $teacherroleModel->getTeacherRole($this->uid, $this->crid);
+            if (is_numeric($role) && $role != 2) {
+                //非系统管理员角色
+                return array();
+            }
+            if (!empty($role['limitscope'])) {
+                //自定义的权限受限管理员角色
+                $classTeacherModel = new ClassTeacherModel();
+                $teacherDepts = $classTeacherModel->getDeptsForTeacher($this->uid, $this->crid);
+                if (empty($teacherDepts)) {
+                    return array();
+                }
+                $parents = array();
+                while ($parent = array_shift($teacherDepts)) {
+                    $parents[] = $parent;
+                    $teacherDepts = array_filter($teacherDepts, function($dept) use($parent) {
+                        return $dept['rgt'] > $parent['rgt'] || $dept['lft'] < $parent['lft'];
+                    });
+                }
+                unset($teacherDepts);
+                $depts = $classTeacherModel->getDeptsForTeacherWithPath($this->crid, $parents);
+                unset($parents);
+                if (empty($depts)) {
+                    return array();
+                }
+            }
+        }
         $model = new ClassesModel();
-        $ret = $model->getDeptmentTree($this->crid, true);
-        /*$init = false;
-        if (!empty($ret)) {
-            foreach ($ret as $item) {
-                if ($item['category'] == 1) {
-                    $init = true;
-                    break;
-                }
-            }
+        if (empty($depts)) {
+            $depts = $model->getDeptmentTree($this->crid, true);
         }
-        if (!$init) {
-            $rootId = $model->resetDeptTree($this->crid, $this->crname);
-            if (empty($rootId)) {
-                return false;
-            }
-            $ret = $model->getDeptmentTree($this->crid, true);
-        }*/
-        if (!empty($ret)) {
-            $roots = $errs = array();
-            foreach ($ret as $dept) {
-                if ($dept['category'] == 1) {
-                    $roots[$dept['classid']] = $dept['classid'];
-                }
-                if ($dept['category'] == 0 && $dept['superior'] == 0) {
-                    $errs[$dept['classid']] = $dept['classid'];
-                }
-                if (!empty($errs)) {
-                    break;
-                }
-            }
-            if (empty($roots) || !empty($errs)) {
-                //缺少顶级部门或数据错误，重建树结构
-                if ($this->resetDept($this->crid, $ret, $this->crname, $model)) {
-                    $ret = $model->getDeptmentTree($this->crid, true);
-                }
-            }
+        if (empty($depts)) {
+            //部门数据为空，生成顶级部门
+            $rootid = $model->initDeptment($this->crid, $this->crname);
+            return array(
+                'classid' => intval($rootid),
+                'classname' => $this->crname,
+                'path' => '/'.$this->crname,
+                'category' => 1,
+                'superior' => 0,
+                'stunum' => 0,
+                'code' => '-',
+                'lft' => 1,
+                'rgt' => 2
+            );
+        }
+        $roots = array_filter($depts, function($dept) {
+            return !empty($dept['category']);
+        });
+        if (!empty($role['limitscope']) && empty($roots)) {
+            $depts[-1] = array(
+                'classid' => -1,
+                'classname' => $this->crname,
+                'path' => '/'.$this->crname,
+                'category' => 1,
+                'superior' => 0,
+                'stunum' => 0,
+                'code' => '-',
+                'displayorder' => 0,
+                'lft' => 1,
+                'rgt' => 2147483647
+            );
 
-            if ($showTeachers) {
-                //注入讲师数据
-                $classids = array_keys($ret);
-                $teachers = $model->getTeachers($classids);
-            }
-            if (!empty($teachers)) {
-                array_walk($ret, function(&$deptment, $k, $teachers) {
-                    foreach ($teachers as $teacher) {
-                        if (!empty($teacher['username']) && $teacher['classid'] == $deptment['classid']) {
-                            $deptment['teacher'][] = $teacher;
-                        }
-                    }
-                }, $teachers);
+        }
+        unset($roots);
+        $reset = false;
+        if (empty($role['limitscope'])) {
+            foreach ($depts as $dept) {
+                if (empty($dept['category']) && !isset($depts[$dept['superior']])) {
+                    $reset = true;
+                    break;
+                }
             }
         }
-        return $ret;
+
+        if (!$reset && empty($role['limitscope'])) {
+            $lfts = array_column($depts, 'lft');
+            $rgts = array_column($depts, 'rgt');
+            $lfts = array_merge($lfts, $rgts);
+            $rgt = count($depts) * 2;
+            $lfts = array_flip($lfts);
+            $rgts = array_fill(1, $rgt, 0);
+            $rgts = array_intersect_key($rgts, $lfts);
+            $rgtCount = count($rgts);
+            if ($rgtCount != $rgt || $rgtCount != count($lfts)) {
+                $reset = true;
+            }
+            unset($rgts, $lfts);
+        }
+
+        if ($reset) {
+            //重置部门结构
+            $depts = $this->resetDept($this->crid, $depts, $this->crname, $model);
+        }
+        if (!empty($role['limitscope'])) {
+            array_walk($depts, function(&$dept, $deptid, $depts) {
+                if (!isset($depts[$dept['superior']]) && $deptid != -1) {
+                    $dept['superior'] = -1;
+                }
+            }, $depts);
+            $lfts = array_column($depts, 'lft');
+            array_multisort($lfts, SORT_ASC, SORT_NUMERIC, $depts);
+        }
+        if ($showTeachers) {
+            //注入讲师数据
+            $classids = array_column($depts, 'classid');
+            $teachers = $model->getTeachers($classids, $this->uid);
+        }
+        if (!empty($teachers)) {
+            array_walk($depts, function(&$deptment, $k, $teachers) {
+                foreach ($teachers as $teacher) {
+                    if (!empty($teacher['username']) && $teacher['classid'] == $deptment['classid']) {
+                        $deptment['teacher'][] = $teacher;
+                    }
+                }
+            }, $teachers);
+        }
+        return $depts;
     }
 
     /**
      * 添加部门
      */
     public function addDeptmentAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return array(
+                'newid' => false
+            );
+        }
         $model = new ClassesModel();
-        $stunum = 0;
         $ret = $model->addDeptment(
             $this->superiorid,
             $this->deptname,
+            $this->code,
             $this->crid,
-            intval($this->displayorder),
-            $stunum
+            intval($this->displayorder)
         );
         return array(
-            'newid' => $ret,
-            'stunum' => $stunum
+            'newid' => $ret
         );
     }
+
     /**
      * 修改部门
      */
     public function updateDeptmentAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return false;
+        }
         $model = new ClassesModel();
+        $params = array(
+            'classname' => $this->deptname,
+            'displayorder' => intval($this->displayorder)
+        );
+        $code = trim($this->code);
+        if ($code != '') {
+            $params['code'] = $code;
+        }
         return $model->updateDeptment(
             $this->classid,
             $this->crid,
-            array(
-                'classname' => $this->deptname,
-                'code' => intval($this->code),
-                'displayorder' => intval($this->displayorder)
-            )
+            $params
         );
     }
 
@@ -433,7 +619,8 @@ class EnterpriseController extends Controller {
 	public function classCourseCountAction(){
 		$model = new ClasscourseModel();
         return $model->getFolderidCountByClassid(
-            $this->classids
+            $this->classids,
+            $this->crid
         );
 	}
 	
@@ -552,6 +739,90 @@ class EnterpriseController extends Controller {
 		return $teacherlist;
 	}
 
+    /**
+     * 部门帮助菜单
+     * @return array
+     */
+    public function getDeptListAction() {
+        $deptModel = new ClassesModel();
+	    return $deptModel->getDeptList($this->crid, trim($this->deptName), $this->number > 0 ? $this->number : null);
+    }
+
+    /**
+     * 验证部门是否有效(部门名称与编号是否有效对应)
+     * @return bool
+     */
+    public function verifyAction() {
+        $deptModel = new ClassesModel();
+        return $deptModel->verify($this->deptName, $this->code, $this->crid);
+    }
+
+    /**
+     * 导入部门
+     */
+    public function importDeptmentsAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return array(
+                'errno' => 100,
+                'msg' => '部门导入功能被锁，请稍候再试'
+            );
+        }
+        $depts = json_decode($this->deptments, true);
+        if (empty($depts) || !is_array($depts)) {
+            if (empty($depts)) {
+                return array(
+                    'errno' => 1,
+                    'msg' => '部门数据不能为空'
+                );
+            }
+        }
+        $depts = array_filter($depts, function($dept) {
+            return !empty($dept['deptname']) && isset($dept['code']);
+        });
+        if (empty($depts)) {
+            return array(
+                'errno' => 1,
+                'msg' => '部门数据不能为空'
+            );
+        }
+        Ebh()->cache->set($lockid, SYSTIME);
+        $model = new ClassesModel();
+        $ret = $model->importDeptments($this->crid, $this->superiorId, $depts);
+        Ebh()->cache->delete($lockid);
+        if ($ret === true) {
+            return array(
+                'errno' => 0
+            );
+        }
+        if ($ret === false) {
+            return array(
+                'errno' => 2,
+                'msg' => '上级部门不存在，导入失败'
+            );
+        }
+        return array(
+            'errno' => 3,
+            'msg' => $ret
+        );
+    }
+
+    /**
+     * 重置部门分组参数
+     * @return bool
+     */
+    public function resetDeptAction() {
+        $lockid = 'lock-dept-'.$this->crid;
+        $lock = Ebh()->cache->get($lockid);
+        if ($lock !== null) {
+            return false;
+        }
+        $model = new ClassesModel();
+        $depts = $model->getDeptmentTree($this->crid, true);
+        $this->resetDept($this->crid, $depts, $this->crname, $model);
+        return true;
+    }
 
     /**
      * 重置部门
@@ -578,7 +849,7 @@ class EnterpriseController extends Controller {
         unset($categorys, $superiors, $classids);
         //找到顶级部门
         $roots = array_filter($depts, function($dept) {
-            return $dept['category'] == 1;
+            return !empty($dept['category']);
         });
         if (!empty($roots)) {
             $deptCount = count($depts);
@@ -621,11 +892,11 @@ class EnterpriseController extends Controller {
         array_walk($depts, function(&$dept, $classid, $args) {
             //调整上级部门关联错误的部门到顶级部门下
             if ($dept['superior'] == 0 || !isset($args['superiors'][$dept['superior']])) {
-                $dept['superior'] = $args['root']['classid'];
+                $dept['superior'] = $args['superiorid'];
             }
             $dept['category'] = 0;
         }, array(
-            'root' => $root,
+            'superiorid' => $root['classid'],
             'superiors' => $superiors
         ));
 
@@ -686,7 +957,10 @@ class EnterpriseController extends Controller {
         if (!$init) {
             array_unshift($depts, $root);
         }
-        return $model->resetDeptment($depts, $crid);
+        if ($root['classid'] != -1) {
+            $model->resetDeptment($depts, $crid);
+        }
+        return $depts;
     }
 
     /**
@@ -702,14 +976,12 @@ class EnterpriseController extends Controller {
             $dept['path'] = $rootPath.'/'.$dept['classname'];
             if (empty($dept['children'])) {
                 $dept['rgt'] = $lft++;
-            } else {
-                $displayorders = array_column($dept['children'], 'displayorder');
-                $classids = array_keys($dept['children']);
-                array_multisort($displayorders, SORT_ASC, SORT_NUMERIC,
-                    $classids, SORT_DESC, SORT_NUMERIC, $dept['children']);
-                $lft = $this->treePath($dept['children'], $rootPath.'/'.$dept['classname'], $lft);
-                $dept['rgt'] = $lft++;
+                continue;
             }
+            $classids = array_keys($dept['children']);
+            array_multisort($classids, SORT_ASC, SORT_NUMERIC, $dept['children']);
+            $lft = $this->treePath($dept['children'], $rootPath.'/'.$dept['classname'], $lft);
+            $dept['rgt'] = $lft++;
         }
         return $lft;
     }
@@ -727,12 +999,12 @@ class EnterpriseController extends Controller {
         foreach ($depts as $dept) {
             if (empty($dept['children'])) {
                 $group[] = $dept;
-            } else {
-                $subGroup = $this->singleDimensional($dept['children']);
-                unset($dept['children']);
-                $group[] = $dept;
-                $group = array_merge($group, $subGroup);
+                continue;
             }
+            $subGroup = $this->singleDimensional($dept['children']);
+            unset($dept['children']);
+            $group[] = $dept;
+            $group = array_merge($group, $subGroup);
         }
         return $group;
     }

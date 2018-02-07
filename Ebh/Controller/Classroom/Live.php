@@ -91,6 +91,8 @@ class LiveController extends Controller{
         $liveinfo['im'] = $imurl;	//聊天室地址
         $liveinfo['key'] = $key;
         $liveinfo['review'] = $live['review'];
+        $liveinfo['review_start'] = $live['review_start'];
+        $liveinfo['review_end'] = $live['review_end'];
         return returnData(1,'',$liveinfo);
     }
     /**
@@ -149,6 +151,8 @@ class LiveController extends Controller{
         $liveinfo['im'] = $imurl;	//聊天室地址
         $liveinfo['key'] = $key;
         $liveinfo['review'] = $live['review'];
+        $liveinfo['review_start'] = $live['review_start'];
+        $liveinfo['review_end'] = $live['review_end'];
         return returnData(1,'',$liveinfo);
     }
 

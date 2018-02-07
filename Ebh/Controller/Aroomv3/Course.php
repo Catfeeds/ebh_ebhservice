@@ -72,6 +72,15 @@ class CourseController extends Controller{
                 'slides' => array('name'=>'slides','type'=>'array', 'default' => array()),
 				'limitnum' => array('name'=>'limitnum', 'type'=>'int','default'=>0),
 				'islimit' => array('name'=>'islimit', 'type'=>'int','default'=>0),
+                'cur' => array('name' => 'cur', 'type' => 'int', 'default' => 0),
+                'summaryshow' => array('name' => 'summaryshow', 'type' => 'int', 'default' => 1),
+                'directoryshow' => array('name' => 'directoryshow', 'type' => 'int', 'default' => 1),
+                'teachershow' => array('name' => 'teachershow', 'type' => 'int', 'default' => 1),
+                'downloadshow' => array('name' => 'downloadshow', 'type' => 'int', 'default' => 1),
+                'summarytitle' => array('name' => 'summarytitle', 'type' => 'string'),
+                'directorytitle' => array('name' => 'directorytitle', 'type' => 'string'),
+                'teachertitle' => array('name' => 'teachertitle', 'type' => 'string'),
+                'downloadtitle' => array('name' => 'downloadtitle', 'type' => 'string')
             ),
             'editzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -143,6 +152,15 @@ class CourseController extends Controller{
                 'slides' => array('name'=>'slides','type'=>'array', 'default' => array()),
 				'limitnum' => array('name'=>'limitnum', 'type'=>'int','default'=>0),
 				'islimit' => array('name'=>'islimit', 'type'=>'int','default'=>0),
+                'cur' => array('name' => 'cur', 'type' => 'int', 'default' => 0),
+                'summaryshow' => array('name' => 'summaryshow', 'type' => 'int', 'default' => 1),
+                'directoryshow' => array('name' => 'directoryshow', 'type' => 'int', 'default' => 1),
+                'teachershow' => array('name' => 'teachershow', 'type' => 'int', 'default' => 1),
+                'downloadshow' => array('name' => 'downloadshow', 'type' => 'int', 'default' => 1),
+                'summarytitle' => array('name' => 'summarytitle', 'type' => 'string'),
+                'directorytitle' => array('name' => 'directorytitle', 'type' => 'string'),
+                'teachertitle' => array('name' => 'teachertitle', 'type' => 'string'),
+                'downloadtitle' => array('name' => 'downloadtitle', 'type' => 'string')
             ),
             'addzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -840,6 +858,29 @@ class CourseController extends Controller{
                     return $check;
                 }
             }
+            $othersettings = array(
+                'directory' => array(
+                    'title' => empty($this->directorytitle) ? '课程目录' : trim($this->directorytitle),
+                    'show' => empty($this->directoryshow) ? 0 : 1,
+                    'cur' => $this->cur == 1 ? 1 : 0
+                ),
+                'summary' => array(
+                    'title' => empty($this->summarytitle) ? '课程介绍' : trim($this->summarytitle),
+                    'show' => empty($this->summaryshow) ? 0 : 1,
+                    'cur' => empty($this->cur) ? 1 : 0
+                ),
+                'teacher' => array(
+                    'title' => empty($this->teachertitle) ? '任课教师' : trim($this->teachertitle),
+                    'show' => empty($this->teachershow) ? 0 : 1,
+                    'cur' => $this->cur == 2 ? 1 : 0
+                ),
+                'download' => array(
+                    'title' => empty($this->downloadtitle) ? '资料下载' : trim($this->downloadtitle),
+                    'show' => empty($this->downloadshow) ? 0 : 1,
+                    'cur' => $this->cur == 3 ? 1 : 0
+                )
+            );
+            $param['othersettings'] = json_encode($othersettings);
         }
         Ebh()->db->set_con(0);
         if($isedit){

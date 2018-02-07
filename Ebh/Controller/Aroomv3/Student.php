@@ -20,7 +20,8 @@ class StudentController extends Controller{
                 'pagesize'  =>  array('name'=>'pagesize','type'=>'int','default'=>getConfig('system.page.listRows')),
                 'isenterprise' => array('name'=>'isenterprise','type'=>'int','default' => 0),
                 'issimple' => array('name' => 'issimple', 'type' => 'int', 'default' => 0),
-                'uid' => array('name' => 'uid', 'type' => 'int', 'default' => 0)
+                'uid' => array('name' => 'uid', 'type' => 'int', 'default' => 0),
+                'ismulclass' => array('name' => 'ismulclass', 'type' => 'boolean', 'default' => false)
             ),
             'detailAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
@@ -245,10 +246,10 @@ class StudentController extends Controller{
             $parameters['classids'] = array_keys($classes);
         }
 
-        $total = $this->roomUserModel->getStudentCount($parameters);
+        $total = $this->roomUserModel->getStudentCount($parameters, $this->ismulclass);
         $pageClass  = new Page($total,$this->pagesize);
         $parameters['limit'] = $pageClass->firstRow.','.$pageClass->listRows;
-        $list = $this->roomUserModel->getStudentList($parameters);
+        $list = $this->roomUserModel->getStudentList($parameters, $this->ismulclass);
 		if(!empty($list) && $this->issimple == 0){
 			$uids = array_column($list,'uid');
 			$uids = implode(',',$uids);
@@ -268,7 +269,6 @@ class StudentController extends Controller{
             'list'  =>  $list,
             'nowPage'   =>  $pageClass->nowPage,
             'totalPage' =>  $pageClass->totalPages
-
         );
     }
 

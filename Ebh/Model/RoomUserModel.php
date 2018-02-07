@@ -122,12 +122,17 @@ class RoomUserModel{
         $afrows = Ebh()->db->insert('ebh_roomusers',$setarr);
         return $afrows;
     }
+
     /**
      * 获取学生列表
-     * @param $param
+     * @param array $param 查询条件
+     * @param bool $ismulclass 是否可以多班级
      * @return mixed
      */
-    public function getStudentList($param){
+    public function getStudentList($param, $ismulclass = false){
+        if (empty($param['crid'])) {
+            return array();
+        }
         Ebh()->db->set_con(0);
         $wheres = array(
             '`a`.`crid`='.intval($param['crid'])
@@ -146,67 +151,90 @@ class RoomUserModel{
             $wheres[] = '`e`.`rgt`<='.intval($param['rgt']);
         }
         if (!empty($param['q'])){
-            $q = Ebh()->db->escape_str($param['q']);
-            $wheres[]= '(`b`.`username` LIKE \'%'.$q.'%\' OR `b`.`realname` LIKE \'%'.$q.'%\')';
+            $wheres[]= '(`b`.`username` LIKE '.Ebh()->db->escape('%'.$param['q'].'%').' OR `b`.`realname` LIKE '.Ebh()->db->escape('%'.$param['q'].'%').')';
         }
-        $fields = array('`a`.`crid`','`a`.cnname','`a`.`mobile` `smobile`','`a`.`cstatus` AS `status`','`b`.`email`','`b`.`mobile`','`b`.`uid`','`b`.`sex`','`b`.`username`','`b`.`groupid`','`b`.`realname`','`b`.`allowip`','`b`.`face`','`b`.`credit`','`b`.`dateline`','`c`.`birthdate`');
+
         if ($filterClass) {
-            $fields[] = '`e`.`classid`';
-            $fields[] = '`e`.`classname`';
-            if (!empty($param['isEnterprise'])) {
-                $fields[] = '`e`.`path`';
-            }
-            $fields = implode(',', $fields);
             $wheres[] = '`e`.`status`=0';
-            $sql = 'SELECT '.$fields.' FROM `ebh_roomusers` `a` 
+            $sql = 'SELECT `a`.`crid`,`a`.`cnname`,`a`.`mobile` AS `smobile`,`a`.`cstatus` AS `status`,`b`.`email`,`b`.`mobile`,`b`.`uid`,`b`.`sex`,`b`.`username`,`b`.`groupid`,`b`.`realname`,`b`.`allowip`,`b`.`face`,`b`.`credit`,`b`.`dateline`,`c`.`birthdate`,`e`.`classid`
+                    FROM `ebh_roomusers` `a` 
                     JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` 
                     JOIN `ebh_members` `c` ON `c`.`memberid`=`a`.`uid` 
-                    LEFT JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid`
+                    JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid` 
                     JOIN `ebh_classes` `e` ON `e`.`classid`=`d`.`classid` AND `e`.`crid`=`a`.`crid` 
-                    WHERE '.implode(' AND ', $wheres);
-            $sql .=' ORDER BY `a`.uid DESC ';
-            if(isset($param['limit'])){
-                $sql .= ' LIMIT '.$param['limit'];
-            }else{
-                $sql .= ' LIMIT 1000';
-            }
-            return Ebh()->db->query($sql)->list_array();
-        }
-        $fields = implode(',', $fields);
-        $sql = 'SELECT '.$fields.' FROM `ebh_roomusers` `a` 
+                    WHERE '.implode(' AND ', $wheres).' ORDER BY `a`.`uid`,`e`.`classid` DESC';
+        } else if ($ismulclass) {
+            $sql = 'SELECT `a`.`crid`,`a`.`cnname`,`a`.`mobile` AS `smobile`,`a`.`cstatus` AS `status`,`b`.`email`,`b`.`mobile`,`b`.`uid`,`b`.`sex`,`b`.`username`,`b`.`groupid`,`b`.`realname`,`b`.`allowip`,`b`.`face`,`b`.`credit`,`b`.`dateline`,`c`.`birthdate`,`e`.`classid`
+                    FROM `ebh_roomusers` `a` 
                     JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` 
                     JOIN `ebh_members` `c` ON `c`.`memberid`=`a`.`uid` 
-                    WHERE '.implode(' AND ', $wheres);
-        $sql .=' ORDER BY `a`.uid DESC ';
-        if(isset($param['limit'])){
-            $sql .= ' LIMIT '.$param['limit'];
-        }else{
-            $sql .= ' LIMIT 1000';
+                    LEFT JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid` AND EXISTS(SELECT 1 FROM `ebh_classes` WHERE `classid`=`d`.`classid` AND `crid`=`a`.`crid`)
+                    LEFT JOIN `ebh_classes` `e` ON `e`.`classid`=`d`.`classid` AND `e`.`crid`=`a`.`crid`
+                    WHERE '.implode(' AND ', $wheres).' ORDER BY `a`.`uid`,`e`.`classid` DESC';
+        } else {
+            $sql = 'SELECT `a`.`crid`,`a`.`cnname`,`a`.`mobile` AS `smobile`,`a`.`cstatus` AS `status`,`b`.`email`,`b`.`mobile`,`b`.`uid`,`b`.`sex`,`b`.`username`,`b`.`groupid`,`b`.`realname`,`b`.`allowip`,`b`.`face`,`b`.`credit`,`b`.`dateline`,`c`.`birthdate`
+                    FROM `ebh_roomusers` `a` 
+                    JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` 
+                    JOIN `ebh_members` `c` ON `c`.`memberid`=`a`.`uid`
+                    WHERE '.implode(' AND ', $wheres).' ORDER BY `a`.`uid`';
         }
-        $students = Ebh()->db->query($sql)->list_array('uid');
+        if (!empty($param['limit'])) {
+            $sql .= ' LIMIT '.$param['limit'];
+        }
+        $students = Ebh()->db->query($sql)->list_array();
         if (empty($students)) {
             return array();
         }
-        $studentids = array_column($students, 'uid');
-        $sql = 'SELECT `a`.`uid`,`b`.`classid`,`b`.`classname`,`b`.`path` FROM `ebh_classstudents` `a` JOIN `ebh_classes` `b` ON `b`.`classid`=`a`.`classid` WHERE a.uid in ('.implode(',', $studentids).') and b.crid='.$param['crid'].' and b.`status`=0';
-        $classes = Ebh()->db->query($sql)->list_array('uid');
-        array_walk($students, function(&$student, $uid, $classes) {
-            if (!isset($classes[$uid])) {
+        if ($filterClass || $ismulclass) {
+            $classids = array_unique(array_column($students, 'classid'));
+            $sql = 'SELECT `classid`,`classname`,`path` FROM `ebh_classes` WHERE `classid` IN('.implode(',', $classids).') AND `crid`='.$param['crid'].' AND `status`=0';
+            $classes = Ebh()->db->query($sql)->list_array('classid');
+        } else {
+            $studentids = array_unique(array_column($students, 'uid'));
+            $sql = 'SELECT `a`.`uid`,`b`.`classid`,`b`.`classname`,`b`.`path` FROM `ebh_classstudents` `a` JOIN `ebh_classes` `b` ON `b`.`classid`=`a`.`classid` WHERE a.uid IN ('.implode(',', $studentids).') AND b.crid='.$param['crid'].' AND b.`status`=0';
+            $classes = Ebh()->db->query($sql)->list_array('uid');
+        }
+
+        if (empty($classes)) {
+            return $students;
+        }
+        array_walk($students, function(&$student, $index, $args) {
+            if ($args['t']) {
+                $classid = $student['classid'];
+                if (!isset($args['classes'][$classid])) {
+                    $student['classname'] = '';
+                    $student['path'] = '';
+                    return;
+                }
+                $student['classname'] = $args['classes'][$classid]['classname'];
+                $student['path'] = $args['classes'][$classid]['path'];
                 return;
             }
-            $student['classid'] = $classes[$uid]['classid'];
-            $student['classname'] = $classes[$uid]['classname'];
-            $student['path'] = $classes[$uid]['path'];
-        }, $classes);
-        return array_values($students);
+            $studentid = $student['uid'];
+            if (!isset($args['classes'][$studentid])) {
+                $student['classname'] = '';
+                $student['path'] = '';
+                $student['classid'] = 0;
+                return;
+            }
+            $student['classname'] = $args['classes'][$studentid]['classname'];
+            $student['path'] = $args['classes'][$studentid]['path'];
+            $student['classid'] = $args['classes'][$studentid]['classid'];
+        }, array(
+            'classes' => $classes,
+            't' => $filterClass || $ismulclass
+        ));
+        return $students;
     }
 
     /**
      * 获取学生数量
      * @param array $param
+     * @param bool $ismulclass 是否可以多班级
      * @return mixed
      */
-    public function getStudentCount($param){
+    public function getStudentCount($param, $ismulclass = false){
+        Ebh()->db->set_con(0);
         if (empty($param['crid'])) {
             return false;
         }
@@ -227,22 +255,28 @@ class RoomUserModel{
             $filterClass = true;
         }
         if (isset($param['q']) && $param['q'] != ''){
-            $q = Ebh()->db->escape_str($param['q']);
-            $wheres[]= '(`b`.`username` LIKE \'%'.$q.'%\' OR `b`.`realname` LIKE \'%'.$q.'%\')';
+            $wheres[]= '(`b`.`username` LIKE '.Ebh()->db->escape('%'.$param['q'].'%').' OR `b`.`realname` LIKE '.Ebh()->db->escape('%'.$param['q'].'%').')';
         }
         if ($filterClass) {
             $wheres[] = '`e`.`status`=0';
             $sql = 'SELECT COUNT(1) AS `count` FROM `ebh_roomusers` `a` 
                     JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` 
                     JOIN `ebh_members` `c` ON `c`.`memberid`=`a`.`uid` 
-                    LEFT JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid`
+                    JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid`
                     JOIN `ebh_classes` `e` ON `e`.`classid`=`d`.`classid` AND `e`.`crid`=`a`.`crid` 
+                    WHERE '.implode(' AND ', $wheres);
+        } else if ($ismulclass) {
+            $sql = 'SELECT COUNT(1) AS `count` FROM `ebh_roomusers` `a` 
+                    JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` 
+                    JOIN `ebh_members` `c` ON `c`.`memberid`=`a`.`uid` 
+                    LEFT JOIN `ebh_classstudents` `d` ON `d`.`uid`=`a`.`uid` AND EXISTS(SELECT 1 FROM `ebh_classes` WHERE `classid`=`d`.`classid` AND `crid`=`a`.`crid`) 
+                    LEFT JOIN `ebh_classes` `e` ON `e`.`classid`=`d`.`classid` AND `e`.`crid`=`a`.`crid` 
                     WHERE '.implode(' AND ', $wheres);
         } else {
             $sql = 'SELECT COUNT(1) AS `count` FROM `ebh_roomusers` `a` 
-                JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` 
-                JOIN `ebh_members` `c` ON `c`.`memberid`=`a`.`uid` 
-                WHERE '.implode(' AND ', $wheres);
+                    JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` 
+                    JOIN `ebh_members` `c` ON `c`.`memberid`=`a`.`uid` 
+                    WHERE '.implode(' AND ', $wheres);
         }
         $count = Ebh()->db->query($sql)->row_array();
         if (empty($count['count'])) {
@@ -250,7 +284,6 @@ class RoomUserModel{
         }
         return $count['count'];
     }
-
 
     /**
      * 根据网校和学员编号获取学员在教室内的信息详情

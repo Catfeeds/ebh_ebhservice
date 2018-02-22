@@ -38,8 +38,14 @@ class CheckinController extends Controller{
         $course = $courseModel->getCourseByCwid($this->cwid);
         //获取课件网校信息
         $classroom = $classroomModel->getModel($course['crid']);
+
+        $roomcourseModel = new RoomCourseModel();
+
+        $roomcourse = $roomcourseModel->getClassidByCwid($this->cwid,$this->crid);
+        $classId = $roomcourse['classids'];
+
         $userpermisionMoldel = new UserpermisionsModel();
-        $userList = $userpermisionMoldel->getUserList(array('crid'=>$this->crid,'folderid'=>$course['folderid']));
+        $userList = $userpermisionMoldel->getUserList(array('crid'=>$this->crid,'folderid'=>$course['folderid'],'classid'=>$classId));
         //获取已签到的学生数组
         $checkinUserList = $redis->zRange('chatroom_checkin_'.$cwid,0,-1);
         //获取需要通知的用户列表

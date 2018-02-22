@@ -5,6 +5,16 @@
  */
 class RoomCourseModel{
     /**
+     * 获取课件观看权限
+     * @param $cwid
+     * @param $crid
+     * @return mixed
+     */
+    public function getClassidByCwid($cwid,$crid){
+        $sql = 'select classids from ebh_roomcourses where cwid='.$cwid . ' and crid='.$crid;
+        return Ebh()->db->query($sql)->row_array();
+    }
+    /**
      * 设置免费试听课件
      * @param array $cwids 课件ID集
      * @param int $crid 网校ID

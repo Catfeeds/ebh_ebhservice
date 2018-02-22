@@ -4,14 +4,23 @@
  * Author: jw
  * Email: 345468755@qq.com
  */
+
+
+function isCli(){
+    return preg_match("/cli/i", php_sapi_name()) ? true : false;
+}
 /**
  * 读取Ebh实例
  *
  * @return Ebh
  */
-function Ebh(){
-    return Ebh::getInstance();
+
+if(!function_exists('Ebh')){
+    function Ebh(){
+        return Ebh::getInstance();
+    }
 }
+
 
 /**
  * 获取配置

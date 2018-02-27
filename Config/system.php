@@ -1,4 +1,4 @@
-<?php
+    <?php
 /**
  * ebhservice.
  * Author: jw
@@ -12,17 +12,17 @@ return array(
             'prefix' => 'ebh_'
         ) ,
         'memcache' => array(
-            'host' => '192.168.0.24',
-            'port' => 11200,
+            'host' => '127.0.0.1',
+            'port' => 11211,
             'prefix' => 'ebh_'
         ) ,
         'redis' => array(
-            'host' => '192.168.0.24',
+            'host' => '127.0.0.1',
             'port' => 6379,
             'prefix' => 'ebh_'
         )
     ) ,
-	'security'=>array('authkey'=>'SFDSEFDSDF'),
+		
 	//默认加载的工具包	
     'auto_helper' => array(
         'common'
@@ -38,5 +38,6 @@ return array(
         'suffix' => '', //路径后缀
         
     ) ,
+    'security'=>array('authkey'=>'SFDSEFDSDF'),
 );
 

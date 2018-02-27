@@ -32,6 +32,7 @@ class Balance implements Payment{
         $ubalance = $user['balance'] - $order['totalfee'];
         $uparam = array('balance'=>$ubalance);
         $uresult = $userModel->update($uparam,$user['uid']);
+
         $creditModel = new CreditModel();
         $creditModel->addCreditlog(array('ruleid'=>23,'detail'=>$order['itemlist'][0]['oname'],'uid'=>$uid,'crid'=>$order['crid']));
         return  array(

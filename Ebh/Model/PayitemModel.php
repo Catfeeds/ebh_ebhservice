@@ -7,7 +7,7 @@ class PayitemModel{
 	*获取服务包内项目列表
 	*/
 	public function getItemList($param) {
-		$sql = 'select i.itemid,i.pid,i.crid,i.folderid,i.iname,i.isummary,i.iprice,i.imonth,i.iday,i.dateline,i.providercrid,i.comfee,i.roomfee,i.providerfee,i.isyouhui,i.iprice_yh,i.comfee_yh,i.roomfee_yh,i.providerfee_yh,r.crname,r.summary,r.cface,r.domain,r.coursenum,r.examcount,r.ispublic,p.pname,s.sname from ebh_pay_items i join ebh_classrooms r on (i.crid = r.crid) join ebh_pay_packages p on p.pid=i.pid left join ebh_pay_sorts s on i.sid = s.sid';
+		$sql = 'select i.itemid,i.pid,i.crid,i.folderid,i.iname,i.isummary,i.iprice,i.imonth,i.iday,i.dateline,i.providercrid,i.comfee,i.roomfee,i.providerfee,i.isyouhui,i.iprice_yh,i.comfee_yh,i.roomfee_yh,i.providerfee_yh,r.crname,r.summary,r.cface,r.domain,r.coursenum,r.examcount,r.ispublic,p.pname,s.sname,i.limitnum,i.islimit from ebh_pay_items i join ebh_classrooms r on (i.crid = r.crid) join ebh_pay_packages p on p.pid=i.pid left join ebh_pay_sorts s on i.sid = s.sid';
         $wherearr = array('i.`status`=0','p.`status`=1');
 		if(!empty($param['pid'])) {
 			$wherearr[] = 'i.pid='.$param['pid'];
@@ -183,7 +183,7 @@ class PayitemModel{
 	public function getItemBySidOrItemid($param = array()) {
 		if(empty($param['sid']) && empty($param['itemid']))
 			return FALSE;
-		$sql = "select i.itemid,i.pid,i.iname,i.isummary,i.iprice,i.imonth,i.iday,i.folderid,i.sid,i.isyouhui,i.iprice_yh,i.comfee_yh,i.roomfee_yh,i.providerfee_yh,cr.crid,cr.crname,p.pname,p.crid pcrid,f.fprice,cr.domain,f.speaker,f.detail,i.cannotpay from ebh_pay_items i join ebh_classrooms cr on i.crid=cr.crid join ebh_pay_packages p on p.pid=i.pid join ebh_folders f on i.folderid=f.folderid"; 
+		$sql = "select i.itemid,i.pid,i.iname,i.isummary,i.iprice,i.imonth,i.iday,i.folderid,i.sid,i.isyouhui,i.iprice_yh,i.comfee_yh,i.roomfee_yh,i.providerfee_yh,cr.crid,cr.crname,p.pname,p.crid pcrid,f.fprice,cr.domain,f.speaker,f.detail,i.cannotpay,i.limitnum,i.islimit from ebh_pay_items i join ebh_classrooms cr on i.crid=cr.crid join ebh_pay_packages p on p.pid=i.pid join ebh_folders f on i.folderid=f.folderid";
 		$wherearr = array('i.`status`=0');
 		if(!empty($param['sid']))
 			$wherearr[] = 'i.sid='.$param['sid'];
@@ -774,7 +774,7 @@ class PayitemModel{
      * @param int $sid 分类ID
      * @return mixed
      */
-    public function getSortCourseList($sid) {
+    public function getSortCourseList($sid,$crid = 0) {
 	    $wheres = array(
 	        '`a`.`sid`='.$sid,
 	        '`a`.`status`=0',
@@ -782,6 +782,9 @@ class PayitemModel{
             '`b`.`folderlevel`=2',
             '`b`.`power`=0'
         );
+        if ($crid > 0) {
+            $wheres[] = '`a`.`crid`='.$crid;
+        }
 	    $sql = 'SELECT `a`.`itemid`,`a`.`iname`,`a`.`iprice`,`a`.`folderid`,`b`.`isschoolfree`,`b`.`img`,`b`.`showmode`,`c`.`srank` 
                 FROM `ebh_pay_items` `a` JOIN `ebh_folders` `b` ON `b`.`folderid`=`a`.`folderid` 
                 LEFT JOIN `ebh_courseranks` `c` ON `c`.`folderid`=`a`.`folderid` AND `c`.`crid`=`a`.`crid` 

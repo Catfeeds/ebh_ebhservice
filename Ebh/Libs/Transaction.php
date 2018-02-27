@@ -15,7 +15,9 @@ class Transaction{
     private $paymentPath = '';
 
     private $payObj = null;
-
+    private static $sync_crlist = array();
+    private static $sync_classlist = array();
+    private static $rsync_data = array();
     /**
      *
      * Transaction constructor.
@@ -64,6 +66,7 @@ class Transaction{
      * @param $ordernumber 支付外部单号
      */
     public static function notifyOrder($orderid,$ordernumber,$param = array()){
+        Ebh()->db->set_con(0);
         $payOrderModel = new PayorderModel();
         $order = $payOrderModel->getOrderById($orderid);
         if(empty($order)) {//订单不存在
@@ -76,7 +79,6 @@ class Transaction{
         if(empty($order['detaillist'])) {
             return false;
         }
-        Ebh()->db->set_con(0);
 
         $providercrids = array();	//订单下内容提供商的crid列表，如果大于1，需要拆分订单
         foreach($order['detaillist'] as $detail) {
@@ -88,12 +90,17 @@ class Transaction{
             }
         }
         //更新订单信息
+        $buyer_id = empty($param['buyer_id'])?'':$param['buyer_id'];
+        $buyer_info = empty($param['buyer_info'])?'':$param['buyer_info'];
         $order['status'] = 1;
         if(isset($param['payip'])){
             $order['payip'] = $param['payip'];
         }
         $order['paytime'] = SYSTIME;
         $order['ordernumber'] = $ordernumber;
+        $order['buyer_id'] = $buyer_id;
+        $order['buyer_info'] = $buyer_info;
+
         //拆分订单处理，当订单明细的提供商crid不同时，则将订单改成每个订单明细对应一个订单。
         $providercount = count($providercrids);
         if($providercount > 1) {
@@ -124,30 +131,28 @@ class Transaction{
         $order['itemlist'] = $order['detaillist'];
         $payOrderModel->updateOrder($order);
 
-        //TODO
 
-        /*
-         * 不执行代码
         //更新学校学生缓存和同步SNS数据
-        if (!empty($this->sync_crlist))
+        $snsLib = new Sns();
+        if (!empty(self::$sync_crlist))
         {
-            foreach ($this->sync_crlist as $crid) {
+            foreach (self::$sync_crlist as $crid) {
                 //更新学校学生缓存
-                Ebh::app()->lib('Sns')->updateRoomUserCache(array('crid'=>$crid,'uid'=>$myorder['uid']));
+                $snsLib->updateRoomUserCache(array('crid'=>$crid,'uid'=>$order['uid']));
                 //同步SNS数据(网校操作)
-                Ebh::app()->lib('Sns')->do_sync($myorder['uid'], 4);
+                $snsLib->do_sync($order['uid'], 4);
             }
         }
         //更新班级学生缓存
-        if (!empty($this->sync_classlist))
+        if (!empty(self::$sync_classlist))
         {
-            foreach ($this->sync_classlist as $classid)
+            foreach (self::$sync_classlist as $classid)
             {
                 //更新班级学生缓存
-                Ebh::app()->lib('Sns')->updateClassUserCache(array('classid'=>$classid,'uid'=>$myorder['uid']));
+                $snsLib->updateClassUserCache(array('classid'=>$classid,'uid'=>$order['uid']));
             }
-        }*/
-
+        }
+        //使用优惠券后返利处理
         $userModel = new UserModel();
         $tmpuser = $userModel->getUserInfoByUid($order['uid']);
 
@@ -203,15 +208,22 @@ class Transaction{
             }
         }
 
+        /*//通知第三方
+        if(!empty(self::$rsync_data)){
+            foreach (self::$rsync_data as $data) {
+                rsapi_call($data['crid'],'folder_buyed',$data);
+            }
+        }*/
 
-        /**
-        //通知第三方
-        if(!empty($this->rsync_data)){
-        foreach ($this->rsync_data as $data) {
-        rsapi_call($data['crid'],'folder_buyed',$data);
+        //处理分销返利情况
+        if (!empty($order['isshare']) && !empty($order['sharefee']) && !empty($order['shareuid'])) {
+            $order['sharedetail'] = empty($user['realname'])?$user['username']:$user['realname'].' '.$order['ordername'].'  价格: <em>'.$order['totalfee'].'</em>';
+            $shareModel = new ShareModel();
+            $res =  $shareModel->addCharge($order);
+            if (empty($res)) {
+                log_message('分销失败,关联uid:'.$order['shareuid']);
+            }
         }
-        }
-         */
 
         return $order;
     }
@@ -220,6 +232,9 @@ class Transaction{
      *支付成功后处理订单详情（主要为生成权限）
      */
     public static function doOrderItem($orderdetail){
+        self::$sync_crlist = array();
+        self::$sync_classlist = array();
+        self::$rsync_data = array();
         $crid = $orderdetail['crid'];
         $folderid = $orderdetail['folderid'];
         $uid = $orderdetail['uid'];
@@ -263,7 +278,7 @@ class Transaction{
                 }
 
                 //记录需要更新缓存和SNS同步操作的学校项目
-                //$this->sync_crlist[] = $crid;
+                self::$sync_crlist[] = $crid;
             }
 
         }else{
@@ -344,7 +359,7 @@ class Transaction{
             $result = $userpermisionModel->updatePermission($myperm);
         }
 
-        //$this->rsync_data[] = array('crid'=>$crid,'uid'=>$uid,'fid'=>$folderid);
+        self::$rsync_data[] = array('crid'=>$crid,'uid'=>$uid,'fid'=>$folderid);
         //用户平台信息更新成功则生成记录并更新年卡信息
 
         //删除订单收藏
@@ -388,7 +403,7 @@ class Transaction{
             $classesModel->addclassstudent($param);
 
             //记录需要更新缓存的班级项目
-            //$this->sync_classlist[] = $classid;
+            self::$sync_classlist[] = $classid;
         }
 
     }

@@ -62,6 +62,11 @@ class FreesController extends Controller{
                 $ret = $ret + $coursewares;
             }
         }
+        $coursewareModel = new CoursewareModel();
+        $frees = $coursewareModel->getFreeCoursewareList($this->crid);
+        if (!empty($frees)) {
+            $ret = $ret + $frees;
+        }
         if (empty($ret)) {
             return array();
         }

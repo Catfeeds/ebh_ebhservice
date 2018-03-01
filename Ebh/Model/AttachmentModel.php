@@ -331,4 +331,19 @@ class AttachmentModel {
         return Ebh()->db->query($sql)->list_array();
 	}
 
+    /**
+     * 通过ID数组获取附件
+     * @param $attids
+     * @return mixed
+     */
+    public function getAttachByAttids($attids){
+        $sql = 'SELECT a.uid,a.attid,a.title,a.filename,a.source,a.url,a.suffix,a.size,a.`status`,a.dateline,a.ispreview,ifnull(s.ism3u8,0) as ism3u8,ifnull(s.previewurl,\'\') as previewurl  from ebh_attachments a left join ebh_sources s on s.sid=a.sourceid';
+        $wherearr[] = ' a.attid in ('.implode(',',$attids).')';
+        $sql .= ' where '.implode(' AND ',$wherearr);
+
+        $sql .= ' order by find_in_set(a.attid,\''.implode(',',$attids).'\')';
+
+        return Ebh()->db->query($sql)->list_array();
+    }
+
 }

@@ -889,7 +889,7 @@ class PayitemModel{
         $sql .= 'JOIN `ebh_pay_packages` `p` ON `i`.`pid`=`p`.`pid` ';
         $sql .= 'JOIN `ebh_folders` `f` ON `f`.`folderid`=`i`.`folderid` ';
         $sql .= ' WHERE '.implode(' AND ',$where).' ';
-        $sql .= ' GROUP BY `i`.`folderid` ORDER BY  NULL';log_message($sql);
+        $sql .= ' GROUP BY `i`.`folderid` ORDER BY  NULL';
         return Ebh()->db->query($sql)->list_array('folderid');
     }
 }

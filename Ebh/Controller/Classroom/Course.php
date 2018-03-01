@@ -39,7 +39,12 @@ class CourseController extends Controller{
             'newCourseAction'=>array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int','min'=>1),
+            ),
+            'getPidAndSidAction'=> array(
+                'crid'=> array('name'=>'crid','type'=>'int','require'=>true),
+                'folderids'=> array('name'=>'folderids','type'=>'string','require'=>true),
             )
+
         );
     }
 
@@ -287,6 +292,19 @@ class CourseController extends Controller{
         }
 
         return returnData(1,'成功获取翻页等待时间',array('stime'=>$stime));
+    }
+
+    /**
+     * @describe:通过课程id获取主类和子类
+     * @Author:tzq
+     * @Date:2018/01/27
+     */
+    public function getPidAndSidAction(){
+        $crid = $this->crid;
+        $folderids = $this->folderids;
+        $model   = new  PayitemModel();
+        $res     = $model->getPidAndSid($crid,$folderids);
+        return $res;
     }
  
 }

@@ -83,6 +83,10 @@ class DesignModel{
         if (isset($param['checked'])) {
             $setarr['checked'] = intval($param['checked']);
         }
+        if (isset($param['preview'])) {
+            $setarr['preview'] = $param['preview'];
+        }
+
         if(!empty($setarr)){
             return $this->db->insert('ebh_roomdesigns',$setarr);
         }
@@ -130,6 +134,9 @@ class DesignModel{
         if (isset($param['checked'])) {
             $setarr['checked'] = intval($param['checked']);
         }
+        if (isset($param['preview'])) {
+            $setarr['preview'] = $param['preview'];
+        }
         $setarr['updated_at'] = SYSTIME;
         if(!empty($setarr)){
             $where = array('crid'=>intval($crid), 'client_type' => $clientType);
@@ -149,7 +156,7 @@ class DesignModel{
      * @return array
      */
     public function getDesignList($crid, $roomtype) {
-        $sql = 'SELECT `did`,`roomtype`,`status`,`client_type`,`created_at`,`updated_at`,`name`,`checked`,`remark` FROM `ebh_roomdesigns` WHERE `crid`='.$crid.' AND `status`=0 AND `roomtype`='.$this->db->escape($roomtype).' ORDER BY `did` ASC';
+        $sql = 'SELECT `did`,`roomtype`,`status`,`client_type`,`created_at`,`updated_at`,`name`,`checked`,`remark`,`preview` FROM `ebh_roomdesigns` WHERE `crid`='.$crid.' AND `status`=0 AND `roomtype`='.$this->db->escape($roomtype).' ORDER BY `did` ASC';
         $ret = Ebh()->db->query($sql)->list_array();
         if (empty($ret)) {
             return array();

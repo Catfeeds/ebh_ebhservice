@@ -249,6 +249,8 @@ class CourseController extends Controller{
                 'folderids'  =>  array('name'=>'folderids','default'=>array(),'type'=>'array'),
                 'uids'  =>  array('name'=>'uids','default'=>array(),'type'=>'array'),
                 'isclear'  =>  array('name'=>'isclear','default'=>0,'type'=>'int'),
+                'isenterprise' => array('name' => 'isenterprise', 'default' => 0, 'type' => 'int'),
+                'inherit' => array('name' => 'inherit', 'default' => 0, 'type' => 'int')
             ),
             'cwCountAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -576,7 +578,7 @@ class CourseController extends Controller{
     */
     public function itemListAction(){
         $power = '0';
-        $itemparam = array('crid'=>$this->crid,'issimple'=>$this->issimple,'limit'=>1000,'pidlist'=>$this->pids,'displayorder'=>'s.sdisplayorder is null,sdisplayorder,i.pid,f.displayorder','power'=>$power);
+        $itemparam = array('crid'=>$this->crid,'issimple'=>$this->issimple,'limit'=>1000,'pidlist'=>$this->pids,'displayorder'=>'s.sdisplayorder is null,sdisplayorder,i.pid,f.displayorder,f.folderid desc','power'=>$power);
         $itemlist = $this->pimodel->getItemFolderList($itemparam);
         return $itemlist;
     }
@@ -1318,7 +1320,7 @@ class CourseController extends Controller{
     */
     public function saveClassCourseAction(){
         $classcoursemodel = new ClasscourseModel();
-        return $classcoursemodel->saveClasscourse(array('classid'=>$this->classid,'folderids'=>$this->folderids,'crid'=>$this->crid,'uids'=>$this->uids,'isclear'=>$this->isclear));
+        return $classcoursemodel->saveClasscourse(array('classid'=>$this->classid,'folderids'=>$this->folderids,'crid'=>$this->crid,'uids'=>$this->uids,'isclear'=>$this->isclear, 'isenterprise' => $this->isenterprise, 'inherit' => $this->inherit));
     }
 
 

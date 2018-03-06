@@ -12,12 +12,12 @@ return array(
             'prefix' => 'ebh_'
         ) ,
         'memcache' => array(
-            'host' => '127.0.0.1',
-            'port' => 11211,
+            'host' => '192.168.0.24',
+            'port' => 11200,
             'prefix' => 'ebh_'
         ) ,
         'redis' => array(
-            'host' => '127.0.0.1',
+            'host' => '192.168.0.24',
             'port' => 6379,
             'prefix' => 'ebh_'
         )

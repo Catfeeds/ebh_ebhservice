@@ -139,6 +139,10 @@ class StudyServiceController extends Controller {
                     'type' => 'int',
                     'require' => true,
                     'min' => 1
+                ),
+                'pid' => array(
+                    'name' => 'pid',
+                    'type' => 'int'
                 )
             ),
             //获取分类下的课程服务
@@ -582,7 +586,7 @@ class StudyServiceController extends Controller {
             return $userpermission['enddate'] > $now;
         });
         $limitBundles = array_filter($list, function($bundle) {
-           return !empty($bundle['islimit']);
+            return !empty($bundle['islimit']);
         });
         $bids = !empty($limitBundles) ? array_column($limitBundles, 'bid') : array();
         unset($limitBundles);
@@ -737,7 +741,11 @@ class StudyServiceController extends Controller {
         }
         $ret = array();
         $located = false;
+        $pid = intval($this->pid);
         foreach ($list as $item) {
+            if ($this->pid > 0 && $item['pid'] != $pid) {
+                continue;
+            }
             if (!isset($ret[$item['pid']])) {
                 if (!$located && !empty($item['located'])) {
                     $locate = 1;

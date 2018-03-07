@@ -326,6 +326,9 @@ class UserpermisionsModel{
             $wherearr[] = 'up.crid='.$param['crid'];
             $wherearr[] = 'c.crid='.$param['crid'];
         }
+        if(!empty($param['classid'])){
+            $wherearr[] = ' c.classid in ('.$param['classid'].')';
+        }
         if(!empty($param['folderid'])){
             $wherearr[] = 'up.folderid='.$param['folderid'];
         }

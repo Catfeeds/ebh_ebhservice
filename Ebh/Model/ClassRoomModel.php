@@ -459,4 +459,26 @@ class ClassRoomModel
         $ret = array_merge($haspower,$nothaspower);
         return $ret;
     }
+
+    /*
+	详情
+	@param int $crid
+	@return array
+	*/
+    public function getclassroomdetail($crid){
+        $sql = 'select c.catid,c.crid,c.stunum,c.teanum,c.crname,c.begindate,c.banner,c.upid,c.enddate,c.dateline,c.maxnum,c.domain,c.status,c.citycode,c.cface,c.craddress,c.crqq,c.crphone,c.cremail,c.crlabel,c.summary,c.ispublic,c.isshare,c.modulepower,c.stumodulepower,c.isschool,c.grade,c.template,c.profitratio,c.crprice,c.displayorder,c.property,u.username,u.uid,u.realname,u.face,u.sex,c.floatadimg,c.floatadurl,c.showusername,c.defaultpass,c.hastv,c.tvlogo,c.custommodule,c.iscollege,c.wechatimg,c.message,c.lng,c.lat,c.isdesign from ebh_classrooms c join ebh_users u on u.uid = c.uid where c.crid='.$crid;
+        return $this->db->query($sql)->row_array();
+    }
+
+    /**
+     *获取网校的分享信息
+     */
+    public function getShareInfo($crid=0) {
+        $crid = intval($crid);
+        if (empty($crid)) {
+            return false;
+        }
+        $sql = 'select isshare,sharepercent from ebh_systemsettings where crid='.$crid;
+        return $this->db->query($sql)->row_array();
+    }
 }

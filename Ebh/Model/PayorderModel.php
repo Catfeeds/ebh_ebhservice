@@ -70,12 +70,28 @@ class PayorderModel{
             $setarr['refunded'] = $param['refunded'];
         if(!empty($param['couponcode']))
             $setarr['couponcode'] = $param['couponcode'];
-        $orderid = Ebh()->db->insert('ebh_pay_orders',$setarr);
+        //分销
+        if(!empty($param['sharefee']))
+            $setarr['sharefee'] = $param['sharefee'];
+        if(!empty($param['shareuid']))
+            $setarr['shareuid'] = $param['shareuid'];
+        if(!empty($param['isshare']))
+            $setarr['isshare'] = $param['isshare'];
+
+
+        $orderid = $this->db->insert('ebh_pay_orders',$setarr);
         if($orderid > 0 && !empty($param['itemlist'])) {	//处理订单明细
             foreach($param['itemlist'] as $item) {
                 $item['orderid'] = $orderid;
-                if(!empty($param['status']))
+                if(!empty($param['status'])) {
                     $item['dstatus'] = $param['status'];
+                }
+                if (empty($item['crid'])) {
+                    $item['crid'] = $param['crid'];
+                }
+                if(!empty($param['bid'])){
+                    $item['bid'] = $param['bid'];
+                }
                 if(!empty($param['isschsource'])){//企业选课crid处理
                     $item['crid'] = $param['crid'];
                     $item['providercrid'] = $param['providercrid'];
@@ -91,100 +107,6 @@ class PayorderModel{
         return $orderid;
     }
 
-
-
-    /**
-     *添加订单明细
-     */
-    public function addOrderDetail($param) {
-        if(empty($param) || empty($param['orderid']))
-            return FALSE;
-        $setarr = array();
-        if(!empty($param['orderid']))
-            $setarr['orderid'] = $param['orderid'];
-        if(!empty($param['pid']))
-            $setarr['pid'] = $param['pid'];
-        if(!empty($param['uid']))
-            $setarr['uid'] = $param['uid'];
-        if(!empty($param['itemid']))
-            $setarr['itemid'] = $param['itemid'];
-        if(!empty($param['fee']))
-            $setarr['fee'] = $param['fee'];
-        if(!empty($param['comfee']))
-            $setarr['comfee'] = $param['comfee'];
-        if(!empty($param['roomfee']))
-            $setarr['roomfee'] = $param['roomfee'];
-        if(!empty($param['providerfee']))
-            $setarr['providerfee'] = $param['providerfee'];
-        if(!empty($param['crid']))
-            $setarr['crid'] = $param['crid'];
-        if(!empty($param['providercrid']))
-            $setarr['providercrid'] = $param['providercrid'];
-        if(!empty($param['folderid']))
-            $setarr['folderid'] = $param['folderid'];
-        if(!empty($param['rname']))
-            $setarr['rname'] = $param['rname'];
-        if(!empty($param['oname']))
-            $setarr['oname'] = $param['oname'];
-        if(!empty($param['omonth']))
-            $setarr['omonth'] = $param['omonth'];
-        if(!empty($param['oday']))
-            $setarr['oday'] = $param['oday'];
-        if(!empty($param['osummary']))
-            $setarr['osummary'] = $param['osummary'];
-        if(isset($param['dstatus']))
-            $setarr['dstatus'] = $param['dstatus'];
-        if(isset($param['cwid']))
-            $setarr['cwid'] = $param['cwid'];
-        if(empty($setarr))
-            return FALSE;
-        $detailid = Ebh()->db->insert('ebh_pay_orderdetails',$setarr);
-        return $detailid;
-    }
-
-
-    /**
-     *根据订单编号获取订单和订单详情信息
-     */
-    public function getOrderById($orderid,$crid=0) {
-        $sql = "select o.orderid,o.ordername,o.refunded,o.crid,o.uid,o.dateline,o.paytime,o.payfrom,o.totalfee,o.ip,o.payip,o.paycode,o.ordernumber,o.bankid,o.remark,o.status,o.pid,o.providercrid,o.comfee,o.roomfee,o.providerfee,o.couponcode,o.cwid,o.buyer_id,o.buyer_info from ebh_pay_orders o where o.orderid=$orderid";
-		if(!empty($crid)){
-			$sql.= ' and o.crid='.$crid;
-		}
-        $myorder = Ebh()->db->query($sql)->row_array();
-        if(!empty($myorder) && empty($crid)) {
-            $myorder['detaillist'] = $this->getOrderDetailListByOrderId($orderid);
-        } elseif(!empty($myorder) && !empty($crid)){//订单详情课程信息
-			$myorder['detaillist'] = $this->getOrderDetailCourse($orderid,$myorder['cwid']);
-		}
-        return $myorder;
-    }
-
-    /**
-     *根据订单编号获取订单详情
-     */
-    public function getOrderDetailListByOrderId($orderid) {
-        $sql = "select d.detailid,d.orderid,d.itemid,d.fee,d.crid,d.folderid,d.oname,d.osummary,d.omonth,d.oday,d.rname,d.providercrid,d.comfee,d.roomfee,d.providerfee,d.cwid from ebh_pay_orderdetails d where d.orderid=$orderid";
-        return Ebh()->db->query($sql)->list_array();
-    }
-	
-	public function getOrderDetailCourse($orderid,$cwid){
-		
-		if(!empty($cwid)){//课件
-			$sql = 'select d.omonth,d.oday,d.fee,d.sharefee,d.comfee,d.roomfee,d.providerfee,cw.title cwtitle
-					from ebh_pay_orderdetails d
-					left join ebh_coursewares cw on d.cwid=cw.cwid 
-					where d.orderid='.$orderid;
-		} else {//课程
-			$sql = 'select p.pname,i.iname,d.omonth,d.oday,d.fee,d.sharefee,d.comfee,d.roomfee,d.providerfee,s.sname
-				from ebh_pay_orderdetails d
-				left join ebh_pay_packages p on d.pid=p.pid
-				left join ebh_pay_items i on d.itemid=i.itemid
-				left join ebh_pay_sorts s on i.sid=s.sid
-				where d.orderid='.$orderid;
-		}
-		return $this->db->query($sql)->list_array();
-	}
 
     /**
      *更新订单信息，如果包含明细，则同时更新明细信息
@@ -232,7 +154,7 @@ class PayorderModel{
             $setarr['status'] = $param['status'];
         if(!empty($param['refunded']))
             $setarr['refunded'] = $param['refunded'];
-        $afrows = Ebh()->db->update('ebh_pay_orders',$setarr,$wherearr);
+        $afrows = $this->db->update('ebh_pay_orders',$setarr,$wherearr);
         if($afrows !== FALSE&&(!empty($param['itemlist']))) {	//处理订单明细
             foreach($param['itemlist'] as $item) {
                 if(isset($param['status']))
@@ -243,7 +165,63 @@ class PayorderModel{
         return $afrows;
     }
 
-
+    /**
+     *添加订单明细
+     */
+    public function addOrderDetail($param) {
+        if(empty($param) || empty($param['orderid']))
+            return FALSE;
+        $setarr = array();
+        if(!empty($param['orderid']))
+            $setarr['orderid'] = $param['orderid'];
+        if(!empty($param['pid']))
+            $setarr['pid'] = $param['pid'];
+        if(!empty($param['uid']))
+            $setarr['uid'] = $param['uid'];
+        if(!empty($param['itemid']))
+            $setarr['itemid'] = $param['itemid'];
+        if(!empty($param['fee']))
+            $setarr['fee'] = $param['fee'];
+        if(!empty($param['comfee']))
+            $setarr['comfee'] = $param['comfee'];
+        if(!empty($param['roomfee']))
+            $setarr['roomfee'] = $param['roomfee'];
+        if(!empty($param['providerfee']))
+            $setarr['providerfee'] = $param['providerfee'];
+        if(!empty($param['crid']))
+            $setarr['crid'] = $param['crid'];
+        if(!empty($param['providercrid']))
+            $setarr['providercrid'] = $param['providercrid'];
+        if(!empty($param['folderid']))
+            $setarr['folderid'] = $param['folderid'];
+        if(!empty($param['rname']))
+            $setarr['rname'] = $param['rname'];
+        if(!empty($param['oname']))
+            $setarr['oname'] = $param['oname'];
+        if(!empty($param['omonth']))
+            $setarr['omonth'] = $param['omonth'];
+        if(!empty($param['oday']))
+            $setarr['oday'] = $param['oday'];
+        if(!empty($param['osummary']))
+            $setarr['osummary'] = $param['osummary'];
+        if(isset($param['dstatus']))
+            $setarr['dstatus'] = $param['dstatus'];
+        if(isset($param['cwid']))
+            $setarr['cwid'] = $param['cwid'];
+        if(isset($param['bid']))
+            $setarr['bid'] = $param['bid'];
+        //分销
+        if(!empty($param['sharefee']))
+            $setarr['sharefee'] = $param['sharefee'];
+        if(!empty($param['shareuid']))
+            $setarr['shareuid'] = $param['shareuid'];
+        if(!empty($param['isshare']))
+            $setarr['isshare'] = $param['isshare'];
+        if(empty($setarr))
+            return FALSE;
+        $detailid = $this->db->insert('ebh_pay_orderdetails',$setarr);
+        return $detailid;
+    }
     /**
      *修改订单明细
      */
@@ -278,9 +256,54 @@ class PayorderModel{
             $setarr['dstatus'] = $item['dstatus'];
         if(empty($setarr))
             return FALSE;
-        $afrows = Ebh()->db->update('ebh_pay_orderdetails',$setarr,$wherearr);
+        $afrows = $this->db->update('ebh_pay_orderdetails',$setarr,$wherearr);
         return $afrows;
     }
+
+
+    /**
+     *根据订单编号获取订单和订单详情信息
+     */
+    public function getOrderById($orderid,$crid=0) {
+        $sql = "select o.orderid,o.ordername,o.refunded,o.crid,o.uid,o.dateline,o.paytime,o.payfrom,o.totalfee,o.ip,o.payip,o.paycode,o.ordernumber,o.bankid,o.remark,o.status,o.pid,o.providercrid,o.comfee,o.roomfee,o.providerfee,o.couponcode,o.cwid,o.buyer_id,o.buyer_info from ebh_pay_orders o where o.orderid=$orderid";
+		if(!empty($crid)){
+			$sql.= ' and o.crid='.$crid;
+		}
+        $myorder = Ebh()->db->query($sql)->row_array();
+        if(!empty($myorder) && empty($crid)) {
+            $myorder['detaillist'] = $this->getOrderDetailListByOrderId($orderid);
+        } elseif(!empty($myorder) && !empty($crid)){//订单详情课程信息
+			$myorder['detaillist'] = $this->getOrderDetailCourse($orderid,$myorder['cwid']);
+		}
+        return $myorder;
+    }
+
+    /**
+     *根据订单编号获取订单详情
+     */
+    public function getOrderDetailListByOrderId($orderid) {
+        $sql = "select d.detailid,d.orderid,d.itemid,d.fee,d.crid,d.folderid,d.oname,d.osummary,d.omonth,d.oday,d.rname,d.providercrid,d.comfee,d.roomfee,d.providerfee,d.cwid from ebh_pay_orderdetails d where d.orderid=$orderid";
+        return Ebh()->db->query($sql)->list_array();
+    }
+	
+	public function getOrderDetailCourse($orderid,$cwid){
+		
+		if(!empty($cwid)){//课件
+			$sql = 'select d.omonth,d.oday,d.fee,d.sharefee,d.comfee,d.roomfee,d.providerfee,cw.title cwtitle
+					from ebh_pay_orderdetails d
+					left join ebh_coursewares cw on d.cwid=cw.cwid 
+					where d.orderid='.$orderid;
+		} else {//课程
+			$sql = 'select p.pname,i.iname,d.omonth,d.oday,d.fee,d.sharefee,d.comfee,d.roomfee,d.providerfee,s.sname
+				from ebh_pay_orderdetails d
+				left join ebh_pay_packages p on d.pid=p.pid
+				left join ebh_pay_items i on d.itemid=i.itemid
+				left join ebh_pay_sorts s on i.sid=s.sid
+				where d.orderid='.$orderid;
+		}
+		return $this->db->query($sql)->list_array();
+	}
+
 	
 	/*
 	 * 订单列表

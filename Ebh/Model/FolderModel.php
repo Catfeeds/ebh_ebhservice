@@ -26,13 +26,41 @@ class FolderModel{
      */
     public function getFolderById($folderid,$crid = 0) {
     	if(empty($folderid))return false;
-        $sql = 'select f.folderid,f.foldername,f.displayorder,f.img,f.coursewarenum,f.summary,f.grade,f.district,f.upid,f.folderlevel,f.folderpath,f.fprice,f.speaker,f.detail,f.viewnum,f.coursewarelogo,f.power,f.credit,f.creditrule,f.playmode,f.isremind,f.remindmsg,f.remindtime,f.creditmode,f.credittime,f.showmode,f.introduce,f.isschoolfree,f.uid,ifnull(i.introtype,0) as introtype,ifnull(i.attid,0) as attid,ifnull(i.slides,\'\') as slides,f.cwcredit,f.cwpercredit,f.examcredit,f.exampercredit,f.creditdate
+        $sql = 'select f.folderid,f.foldername,f.displayorder,f.img,f.coursewarenum,f.summary,f.grade,f.district,f.upid,f.folderlevel,f.folderpath,f.fprice,f.speaker,f.detail,f.viewnum,f.coursewarelogo,f.power,f.credit,f.creditrule,f.playmode,f.isremind,f.remindmsg,f.remindtime,f.creditmode,f.credittime,f.showmode,f.introduce,f.isschoolfree,f.uid,ifnull(i.introtype,0) as introtype,ifnull(i.attid,0) as attid,ifnull(i.slides,\'\') as slides,f.cwcredit,f.cwpercredit,f.examcredit,f.exampercredit,f.creditdate,f.othersettings
 		from ebh_folders f left join ebh_folder_intros i on i.folderid=f.folderid where f.folderid='.
             $folderid.' and ifnull(i.`status`,0)=0';
 		if($crid>0){
 			$sql .= ' and f.crid = ' . $crid;
 		}
-		return Ebh()->db->query($sql)->row_array();
+		$ret = Ebh()->db->query($sql)->row_array();
+		if (!empty($ret)) {
+		    if (empty($ret['othersettings'])) {
+		        $ret['othersettings'] = array(
+                    'directory' => array(
+                        'title' => '课程目录',
+                        'show' => 1,
+                        'cur' => 0
+                    ),
+                    'summary' => array(
+                        'title' => '课程介绍',
+                        'show' => 1,
+                        'cur' => 1
+                    ),
+                    'teacher' => array(
+                        'title' => '任课教师',
+                        'show' => 1,
+                        'cur' => 0
+                    ),
+                    'download' => array(
+                        'title' => '资料下载',
+                        'show' => 1,
+                        'cur' => 0
+                    )
+                );
+                $ret['othersettings'] = json_encode($ret['othersettings']);
+            }
+        }
+		return $ret;
     }
 	
 	/**
@@ -319,6 +347,9 @@ class FolderModel{
 		if(isset($param['showmode']))
 			$setarr['showmode'] = $param['showmode'];
 		$setarr['detail'] = !isset($param['detail']) ? '' : trim($param['detail']);
+		if (isset($param['othersettings'])) {
+		    $setarr['othersettings'] = $param['othersettings'];
+        }
 		
 		$farr['introduce'] = '';
 
@@ -498,6 +529,9 @@ class FolderModel{
 			$setarr['showmode'] = $param['showmode'];
 		if(!empty($param['introduce']))
 			$setarr['introduce'] = $param['introduce'];
+		if (isset($param['othersettings'])) {
+		    $setarr['othersettings'] = $param['othersettings'];
+        }
 		$wherearr['crid'] = $param['crid'];
 		$wherearr['folderid'] = $param['folderid'];
 		return Ebh()->db->update('ebh_folders',$setarr,$wherearr);

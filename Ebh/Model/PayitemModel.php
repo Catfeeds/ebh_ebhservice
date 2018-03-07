@@ -857,4 +857,39 @@ class PayitemModel{
         }
         return $ret;
     }
+
+    /**
+     * @describe:通过课程id获取服务包id和分类id
+     * @Author:tzq
+     * @Date:2018/01/27
+     * @param int $crid       网校id
+     * @param string $folders 课程id
+     * @return  array
+     */
+    public function getPidAndSid($crid,$folderids){
+        if($crid <= 0 || $folderids <= 0){
+            return false;
+        }
+        $filed = array(
+            '`i`.`pid`',
+            '`s`.`sname` `iname`',
+            '`i`.`sid`',
+            '`i`.`folderid`',
+            '`p`.`pname`',
+            '`f`.`foldername`',
+
+        );
+        $where  = array();
+        $where[] = '`i`.`crid`='.$crid;
+        $where[] = '`i`.`folderid` IN('.$folderids.')';
+        $where[] = '`i`.`status` = 0';
+        $where[] = '`p`.`crid`='.$crid;
+        $sql = 'SELECT '.implode(',',$filed).' FROM `ebh_pay_items` `i` ';
+        $sql .= 'LEFT JOIN `ebh_pay_sorts` `s` ON `s`.`sid`=`i`.`sid` ';
+        $sql .= 'JOIN `ebh_pay_packages` `p` ON `i`.`pid`=`p`.`pid` ';
+        $sql .= 'JOIN `ebh_folders` `f` ON `f`.`folderid`=`i`.`folderid` ';
+        $sql .= ' WHERE '.implode(' AND ',$where).' ';
+        $sql .= ' GROUP BY `i`.`folderid` ORDER BY  NULL';
+        return Ebh()->db->query($sql)->list_array('folderid');
+    }
 }

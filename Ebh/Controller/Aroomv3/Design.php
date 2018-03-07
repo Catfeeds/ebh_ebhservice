@@ -130,12 +130,21 @@ class DesignController extends Controller
             'did' => 0,
             'name' => '老版首页装扮',
             'remark' => '老版Plate首页装扮',
+            'preview' => '',
             'client_type' => 0
         ));
 
         array_walk($list, function(&$design) {
             if (trim($design['name']) == '') {
                 $design['name'] = '未命名';
+            }
+            if (empty($design['preview'])) {
+                return;
+            }
+            $space = strpos($design['preview'], ' ');
+            if ($space !== false) {
+                $design['preview'] = substr($design['preview'], 0, $space);
+                $design['preview'] = urldecode($design['preview']);
             }
         });
         $ret['pc'] = array_filter($list, function($design) {

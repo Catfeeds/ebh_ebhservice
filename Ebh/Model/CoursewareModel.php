@@ -1117,4 +1117,13 @@ class CoursewareModel
         return $this->db->query($sql)->list_array('cwid');//获取课件列表
     }
 
+    /**
+     * 免费试听课件
+     * @param int $crid 网校ID
+     * @return mixed
+     */
+    public function getFreeCoursewareList($crid) {
+        $sql = 'SELECT `a`.`crid`,`b`.`cwid`,`b`.`ism3u8`,`b`.`title`,`b`.`logo`,`b`.`viewnum` FROM `ebh_roomcourses` `a` JOIN `ebh_coursewares` `b` ON `b`.`cwid`=`a`.`cwid` WHERE `a`.`crid`='.$crid.' AND `a`.`isfree`=1';
+        return Ebh()->db->query($sql)->list_array('cwid');
+    }
 }

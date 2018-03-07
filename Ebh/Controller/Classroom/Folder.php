@@ -68,6 +68,7 @@ class FolderController extends Controller{
                 'getFolderStudentAction' => array(
                     'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
                     'folderid'  =>  array('name'=>'folderid','require'=>true,'type'=>'int','min'=>1),
+                    'cwid'  =>  array('name'=>'cwid','type'=>'int','default'=>0),
                 ),
         );
     }
@@ -81,9 +82,16 @@ class FolderController extends Controller{
     public function getFolderStudentAction(){
         $classroomMoldel = new ClassRoomModel();
         $roominfo = $classroomMoldel->getModel($this->crid);
+        $classId = '';
+        if($this->cwid > 0){
+            $roomcourseModel = new RoomCourseModel();
 
+            $roomcourse = $roomcourseModel->getClassidByCwid($this->cwid,$this->crid);
+            $classId = $roomcourse['classids'];
+
+        }
         $userpermisionMoldel = new UserpermisionsModel();
-        $userList = $userpermisionMoldel->getUserList(array('crid'=>$this->crid,'folderid'=>$this->folderid));
+        $userList = $userpermisionMoldel->getUserList(array('crid'=>$this->crid,'folderid'=>$this->folderid,'classid'=>$classId));
         return $userList;
 
     }

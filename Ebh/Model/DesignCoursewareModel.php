@@ -13,6 +13,10 @@ class DesignCoursewareModel{
      */
     const VEDIO = 2;
     /**
+     * 背景
+     */
+    const BACK = 3;
+    /**
      * 设置免费试听课件
      * @param array $cwids 课件ID集
      * @param int $crid 网校ID
@@ -21,8 +25,8 @@ class DesignCoursewareModel{
      * @return int 设置成功数
      */
     public function setDesignCoursewares($cwids, $crid, $did, $groupid = self::FREE) {
-        $valid = $this->checkDesign($did, $crid);
-        if (!$valid) {
+        $valid = Ebh()->db->query('SELECT `did` FROM `ebh_roomdesigns` WHERE `did`='.$did.' AND `crid`='.$crid.' LIMIT 1')->row_array();
+        if (empty($valid)) {
             return false;
         }
         $affectedRows = 0;
@@ -33,11 +37,12 @@ class DesignCoursewareModel{
             return false;
         }
         foreach ($cwids as $cwid) {
-            $affectedRows += Ebh()->db->query('INSERT INTO `ebh_designcoursewares`(`cwid`,`did`,`groupid`,`dateline`,`del`) VALUES('.$cwid.','.$did.','.$groupid.','.SYSTIME.',0) ON DUPLICATE KEY UPDATE `del`=0,`dateline`='.SYSTIME, false);
+            Ebh()->db->query('INSERT INTO `ebh_designcoursewares`(`cwid`,`did`,`groupid`,`dateline`,`del`) VALUES('.$cwid.','.$did.','.$groupid.','.SYSTIME.',0) ON DUPLICATE KEY UPDATE `del`=0,`dateline`='.SYSTIME, false);
             if (Ebh()->db->trans_status() === false) {
                 Ebh()->db->rollback_trans();
                 return false;
             }
+            $affectedRows += Ebh()->db->affected_rows();
         }
         Ebh()->db->commit_trans();
         return $affectedRows;
@@ -87,7 +92,6 @@ class DesignCoursewareModel{
         $wheres = array(
             '`a`.`cwid`='.$cwid,
             '`a`.`did`='.$did,
-            '`a`.`groupid`='.self::VEDIO,
             '`a`.`del`=0',
             '`b`.`status`=1',
             '`b`.`ism3u8`=1'

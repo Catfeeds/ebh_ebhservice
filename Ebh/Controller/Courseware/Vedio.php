@@ -41,7 +41,7 @@ class VedioController extends Controller{
                 'cwids' => array(
                     'name' => 'cwids',
                     'type' => 'array',
-                    'require' => true
+                    'default' => array()
                 ),
                 'crid' => array(
                     'name' => 'crid',
@@ -63,6 +63,34 @@ class VedioController extends Controller{
                 ),
                 'did' => array(
                     'name' => 'did',
+                    'type' => 'int',
+                    'require' => true
+                )
+            ),
+            //设置装扮免费试听视频课件、装扮主页视频课件、装扮背景视频
+            'setHomeVedioAction' => array(
+                'did' => array(
+                    'name' => 'did',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'auditions' => array(
+                    'name' => 'auditions',
+                    'type' => 'array',
+                    'default' => array()
+                ),
+                'vedioids' => array(
+                    'name' => 'vedioids',
+                    'type' => 'array',
+                    'default' => array()
+                ),
+                'backvedio' => array(
+                    'name' => 'backvedio',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'crid' => array(
+                    'name' => 'crid',
                     'type' => 'int',
                     'require' => true
                 )
@@ -121,5 +149,20 @@ class VedioController extends Controller{
             }
         }
         return $vedio;
+    }
+
+    /**
+     * 设置装扮免费试听视频课件、装扮主页视频课件、装扮背景视频
+     * @return int
+     */
+    public function setHomeVedioAction() {
+        $auditions = array_map('intval', $this->auditions);
+        $vedioids = array_map('intval', $this->vedioids);
+        $model = new DesignCoursewareModel();
+        $backvedios = $this->backvedio > 0 ? array($this->backvedio) : array();
+        $model->setDesignCoursewares($auditions, $this->crid, $this->did, DesignCoursewareModel::FREE);
+        $model->setDesignCoursewares($vedioids, $this->crid, $this->did, DesignCoursewareModel::VEDIO);
+        $model->setDesignCoursewares($backvedios, $this->crid, $this->did, DesignCoursewareModel::BACK);
+        return 1;
     }
 }

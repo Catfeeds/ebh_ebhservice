@@ -1,4 +1,4 @@
-<?php
+    <?php
 /**
  * ebhservice.
  * Author: jw
@@ -22,7 +22,7 @@ return array(
             'prefix' => 'ebh_'
         )
     ) ,
-	'security'=>array('authkey'=>'SFDSEFDSDF'),
+		
 	//默认加载的工具包	
     'auto_helper' => array(
         'common'
@@ -38,5 +38,6 @@ return array(
         'suffix' => '', //路径后缀
         
     ) ,
+    'security'=>array('authkey'=>'SFDSEFDSDF'),
 );
 

@@ -87,6 +87,7 @@ class ClassesController extends Controller{
                 'grade'  =>  array('name'=>'grade','type'=>'int'),
                 'k'  =>  array('name'=>'k','type'=>'string'),
                 'limit'  =>  array('name'=>'limit','type'=>'string'),
+                'hasGrade' => array('name' => 'hasGrade', 'type' => 'int', 'default' => 0)
             ),
 
         );
@@ -327,6 +328,8 @@ class ClassesController extends Controller{
         }
         if(!empty($this->grade)){
             $parameters['grade'] = $this->grade;
+        } else if (!empty($this->hasGrade)) {
+            $parameters['hasGrade'] = true;
         }
         if(!empty($this->limit)){
             $parameters['limit'] = $this->limit;

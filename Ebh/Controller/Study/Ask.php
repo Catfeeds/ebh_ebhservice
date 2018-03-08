@@ -36,8 +36,17 @@ class AskController extends Controller
                     'type'=>'int',
                     'require'=>true
 
+                ),
+                'showquestionbygrade' => array(
+                    'name' => 'showquestionbygrade',
+                    'type' => 'int',
+                    'default' => 0
+                ),
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'default' => 0
                 )),
-
                 'getRateAction' =>array(
                     'uid'=>array('name'=>'uid','type'=>'int','require'=>true),
                     'realname'=>array('name'=>'realname','type'=>'string','require'=>true),
@@ -51,15 +60,22 @@ class AskController extends Controller
      * @return array
      */
     public function getsortnameAction(){
-
+        $grade = 0;
+        if ($this->showquestionbygrade != 0) {
+            $model = new ClassstudentsModel();
+            $classinfo = $model->getClassInfo($this->uid, $this->crid);
+            if (!empty($classinfo['grade'])) {
+                $grade = $classinfo['grade'];
+            }
+        }
         switch ($this->type) {
             case 2:
                 $AskModel = new AskAnswersModel();
-                $list = $AskModel->getAskanswer($this->crid);
+                $list = $AskModel->getAskanswer($this->crid, $grade);
                 break;
             case 1:
                 $questModel = new AskQuestionModel();
-                $list = $questModel->getQuestions($this->crid);
+                $list = $questModel->getQuestions($this->crid, $grade);
                 break;
             default:
                 $list = array();

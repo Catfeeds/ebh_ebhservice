@@ -88,4 +88,19 @@ class ClassstudentsModel{
                 WHERE `a`.`classid`='.$classid;
         return Ebh()->db->query($sql)->list_array('uid');
     }
+
+    /**
+     * 通过学生ID获取学生的年级ID
+     * @param int $uid 学生ID
+     * @param int $crid 网校ID
+     * @return mixed
+     */
+    public function getClassInfo($uid, $crid) {
+        $sql = 'SELECT `b`.`classid`,`b`.`classname`,`b`.`grade` FROM `ebh_classstudents` `a` LEFT JOIN `ebh_classes` `b` ON `b`.`classid`=`a`.`classid` WHERE `a`.`uid`='.$uid.' AND `b`.`crid`='.$crid.' LIMIT 1';
+        $ret = Ebh()->db->query($sql)->row_array();
+        if (empty($ret)) {
+            return false;
+        }
+        return $ret;
+    }
 }

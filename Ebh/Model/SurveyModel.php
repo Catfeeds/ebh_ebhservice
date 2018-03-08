@@ -316,4 +316,38 @@ class SurveyModel{
         }
         return $result;
     }
+
+    /**
+     * 根据sid验证用户将参与的调查问卷状态是否正常
+     * @param  int $sid 调查问卷id
+     * @param  int $uid
+     * @return boolean 调查问卷状态为已发布,未超时,未删除且用户未回答过则返回true,否则false
+     */
+    public function getSurveyStatus($param){
+        $return = false;
+        $sid = !empty($param['sid']) ? intval($param['sid']) : 0;
+        $uid = !empty($param['uid']) ? intval($param['uid']) : 0;
+        $crid = !empty($param['crid']) ? intval($param['crid']) : 0;
+        $type = isset($param['type']) ? intval($param['type']) : 6;
+        //type类型 0网校主页,1学生学习主页,2相关课件页,3选课问卷,4开通课程前的问卷(填空题),5登录时问卷,6开通服务后问卷
+        if(empty($uid) || empty($crid) || empty($type)  || empty($sid) || ($sid<0)){
+            return false;
+        }
+        //查询调查问卷状态是否为已发布,未超时,未删除
+        $sql = 'select sid from ebh_surveys where sid = '.$sid.' and crid = '.$crid.' and type = '.$type.' and isdelete=0 and ispublish=1 and startdate<=' . SYSTIME . ' and enddate>=' . SYSTIME;
+        $row = $this->db->query($sql)->row_array();
+        if(empty($row)){
+            return false;
+        }
+        //查询用户是否回答过该问卷
+        $ssql = 'select sid from ebh_surveyanswers where sid='.$sid.' and uid='.$uid;
+        $res = $this->db->query($ssql)->row_array();
+        if(!empty($res)){
+            return false;
+        }
+        if(is_numeric($row['sid']) && ($row['sid']>0)){
+            $return = true;
+        }
+        return $return;
+    }
 }

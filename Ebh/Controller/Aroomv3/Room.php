@@ -289,6 +289,10 @@ class RoomController extends Controller
 				'cwlistonlyself' => array(
                     'name' => 'cwlistonlyself',
                     'type' => 'int'
+                ),
+                'showquestionbygrade' => array(
+                    'name' => 'showquestionbygrade',
+                    'type' => 'int'
                 )
             ),
             //登录限制
@@ -1071,6 +1075,9 @@ class RoomController extends Controller
         }
 		if ($this->cwlistonlyself !== NULL) {
             $params['cwlistonlyself'] = min(1, max(0, $this->cwlistonlyself));
+        }
+        if ($this->showquestionbygrade !== NULL) {
+            $params['showquestionbygrade'] = min(1, max(0, $this->showquestionbygrade));
         }
         if ($model->exists($this->crid)) {
             return $model->update($this->crid, $params);

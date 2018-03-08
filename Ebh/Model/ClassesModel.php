@@ -401,6 +401,7 @@ class ClassesModel{
     }
 
     /**
+     * 丢弃函数
      * 添加部门
      * @param int $superiorId 上级部门ID
      * @param string $deptname 部门名称
@@ -502,6 +503,7 @@ class ClassesModel{
     }
 
     /**
+     * 丢弃函数
      * 修改部门
      * @param int $classid 部门ID
      * @param int $crid 所属网校ID
@@ -591,6 +593,7 @@ class ClassesModel{
     }
 
     /**
+     * 丢弃函数
      * 删除部门
      * @param $classid
      * @param $crid
@@ -1136,6 +1139,7 @@ class ClassesModel{
     }
 
     /**
+     * 丢弃函数
      * 重置部门数据
      * @param array $depts 部门数组
      * @param int $crid 所在网校
@@ -1296,6 +1300,7 @@ class ClassesModel{
     }
 
     /**
+     * 丢弃函数
      * 导入部门
      * @param int $crid 网校ID
      * @param int superiorId 导入上级部门ID
@@ -1409,8 +1414,10 @@ class ClassesModel{
             $sql .= ' AND `classname` LIKE \'%'.Ebh()->db->escape_str($param['k']).'%\'';
         }
         $grade = !empty($param['grade']) ? intval($param['grade']) : 0;//年级
-        if($grade>0){
-            $sql .= 'AND `grade`=' .$grade;
+        if (!empty($param['grade'])) {
+            $sql .= ' AND `grade`='.$param['grade'];
+        } else if (!empty($param['hasGrade'])) {
+            $sql .= ' AND `grade`>0';
         }
         if(!empty($param['limit'])) {
             $sql .= ' LIMIT '. Ebh()->db->escape_str($param['limit']);

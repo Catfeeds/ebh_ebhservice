@@ -14,6 +14,7 @@ class AskController extends Controller{
                 'uid'  =>  array('name'=>'uid','default'=>0),
                 'folderid'  =>  array('name'=>'folderid','default'=>0),
                 'type'  =>  array('name'=>'type','default'=>0), //列表类型 0:所有问题 1:热门问题 2:推荐问题 3:等待答复 (此处UID必传) 4:已解决的问题 5:我回答的问题（此处UID必传） 6:我关注的问题 (此处UID必传)
+                'studentid' => array('name' => 'studentid', 'type' => 'int', 'default' => 0)
             ),
             'addAction'    =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
@@ -336,6 +337,22 @@ class AskController extends Controller{
      * @return array
      */
     private function getQuestionList($parameters){
+        if ($this->studentid > 0) {
+            $classroomModel = new ClassRoomModel();
+            $roomtype = $classroomModel->getRoomType($this->crid);
+            if ($roomtype == 'edu') {
+                $systemsettingModel = new SystemSettingModel();
+                $settings = $systemsettingModel->getSetting($this->crid);
+                if (!empty($settings['showquestionbygrade'])) {
+                    $classstudentModel = new ClassstudentsModel();
+                    $classinfo = $classstudentModel->getClassInfo($this->studentid, $this->crid);
+                }
+            }
+        }
+
+        if (!empty($classinfo)) {
+            $parameters['grade'] = $classinfo['grade'];
+        }
         $askModel = new AskQuestionModel();
         $total =  $askModel->getCount($this->crid,$parameters);
         $pageLib = new Page($total);
@@ -819,8 +836,6 @@ class AskController extends Controller{
                 } else {
                     $classes = $classTeacherModel->getClassesForTeacher($this->uid, $this->crid);
                 }
-                log_message(json_encode($classes));
-                log_message('获取老师下班级');
                 if (empty($classes)) {
                     return array();
                 }

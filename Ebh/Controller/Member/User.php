@@ -96,6 +96,18 @@ class UserController extends Controller{
                     'type' => 'int',
                     'require' => true
                 )
+            ),
+            'getStudentClassInfoAction' => array(
+                'uid' => array(
+                    'name' => 'uid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                )
             )
         );
     }
@@ -397,5 +409,14 @@ class UserController extends Controller{
     public function getStudentClassIdAction() {
         $model = new ClassstudentsModel();
         return $model->getClassIdByUid($this->uid, $this->crid);
+    }
+
+    /**
+     * 获取学生班级
+     * @return int
+     */
+    public function getStudentClassInfoAction() {
+        $model = new ClassstudentsModel();
+        return $model->getClassInfo($this->uid, $this->crid);
     }
 }

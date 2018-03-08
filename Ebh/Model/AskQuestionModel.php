@@ -311,6 +311,11 @@ class AskQuestionModel {
                 $whereArr[] = '`b`.`classid` IN('.implode(',', $filters['classids']).')';
             }
             $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_askquestions` `a` JOIN `ebh_classstudents` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classes` `c` ON `c`.`classid`=`b`.`classid` AND `c`.`crid`=`a`.`crid` WHERE '.implode(' AND ', $whereArr);
+        } else if (!empty($filters['grade'])) {
+            $whereArr = array_map(function($where) {
+                return '`a`.'.$where;
+            }, $whereArr);
+            $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_askquestions` `a` JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`uid` JOIN `ebh_classstudents` `c` ON `c`.`uid`=`a`.`uid` JOIN `ebh_classes` `d` ON `d`.`classid`=`c`.`classid` AND `d`.`crid`=`a`.`crid` AND `d`.`grade`='.$filters['grade'].' WHERE '.implode(' AND ', $whereArr);
         } else {
             $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_askquestions` WHERE '.implode(' AND ', $whereArr);
         }
@@ -366,6 +371,9 @@ class AskQuestionModel {
     public function getAskList($crid,$param){
         $sql = 'select a.qid,a.crid,a.folderid,a.uid,a.title,a.message,a.audioname,a.audiosrc,a.audiotime,a.imagename,a.imagesrc,a.answercount,a.thankcount,a.hasbest,a.dateline,a.viewnum,a.cwid,a.cwname,a.reward,u.username,u.realname,u.nickname,u.face,u.groupid,u.sex from  ebh_askquestions a
                 join ebh_users u on a.uid=u.uid';
+        if (!empty($param['grade'])) {
+            $sql .= ' join ebh_classstudents cs on cs.uid=a.uid join ebh_classes c on c.classid=cs.classid and c.crid=a.crid and c.grade='.$param['grade'];
+        }
         $whereArr = array(
             '`a`.`crid`='.intval($crid)
         );
@@ -496,10 +504,15 @@ class AskQuestionModel {
     }
     /****
      * 获取提问排名
+     * @param int $crid 网校ID
+     * @param int $grade 年级过滤参数，默认0不过滤
      * @return  array
      */
-    public function getQuestions($crid) {
+    public function getQuestions($crid, $grade = 0) {
         $sql = 'SELECT COUNT(*) as number ,ask.uid,ask.crid,u.realname,u.sex,u.username,u.face FROM ebh_askquestions ask LEFT JOIN ebh_users u ON ask.uid=u.uid ';
+        if ($grade > 0) {
+            $sql .= ' join ebh_classstudents cs on cs.uid=u.uid join ebh_classes c on c.classid=cs.classid and c.crid=ask.crid and c.grade='.$grade;
+        }
         $sql .= ' WHERE ask.crid='.$crid.' GROUP BY ask.uid   '.' ORDER BY number DESC,ask.dateline DESC LIMIT 100';
 
         return Ebh()->db->query($sql)->list_array();

@@ -30,6 +30,7 @@ class CourseController extends Controller{
             'courseDetailAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
                 'folderid'  =>  array('name'=>'folderid','require'=>TRUE,'type'=>'int'),
+                'roominfo' => array('name' => 'roominfo', 'type' => 'array')
             ),
             'payitemDetailAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -80,7 +81,8 @@ class CourseController extends Controller{
                 'summarytitle' => array('name' => 'summarytitle', 'type' => 'string'),
                 'directorytitle' => array('name' => 'directorytitle', 'type' => 'string'),
                 'teachertitle' => array('name' => 'teachertitle', 'type' => 'string'),
-                'downloadtitle' => array('name' => 'downloadtitle', 'type' => 'string')
+                'downloadtitle' => array('name' => 'downloadtitle', 'type' => 'string'),
+                'targets' => array('name' => 'targets', 'type' => 'array')
             ),
             'editzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -160,7 +162,8 @@ class CourseController extends Controller{
                 'summarytitle' => array('name' => 'summarytitle', 'type' => 'string'),
                 'directorytitle' => array('name' => 'directorytitle', 'type' => 'string'),
                 'teachertitle' => array('name' => 'teachertitle', 'type' => 'string'),
-                'downloadtitle' => array('name' => 'downloadtitle', 'type' => 'string')
+                'downloadtitle' => array('name' => 'downloadtitle', 'type' => 'string'),
+                'targets' => array('name' => 'targets', 'type' => 'array')
             ),
             'addzjdlrAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>TRUE,'type'=>'int'),
@@ -512,8 +515,19 @@ class CourseController extends Controller{
                     'type'=>'int',
                     'require'=>true
                 )
+            ),
+            'getCourseTargetsAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => 'true'
+                ),
+                'folderids' => array(
+                    'name' => 'folderids',
+                    'type' => 'string',
+                    'require' => true
+                )
             )
-
         );
     }
     /*
@@ -602,6 +616,15 @@ class CourseController extends Controller{
                 $coursedetail['slides'] = array_values($coursedetail['slides']);
             } else {
                 $coursedetail['slides'] = array();
+            }
+
+            if ($this->roominfo['isschool'] == 7 && $this->roominfo['property'] != 3) {
+                $folderTagetModel = new FolderTargetModel();
+                $coursedetail['targets'] = $folderTagetModel->getTargetsForFolder($folderid, $this->roominfo['crid']);
+                $coursedetail['targets'] = explode(',', $coursedetail['targets']);
+                $coursedetail['targets'] = array_filter($coursedetail['targets'], function($id) {
+                   return is_numeric($id);
+                });
             }
         }
         return $coursedetail;
@@ -930,6 +953,19 @@ class CourseController extends Controller{
             }
         } else {
             $introParams['attid'] = intval($this->attachment['attid']);
+        }
+        //设置课程服务对象
+        if ($this->roominfo['isschool'] == 7 && $this->roominfo['property'] != 3) {
+            if (empty($this->targets)) {
+                $targets = array();
+            } else {
+                $targets = array_filter($this->targets, function($tid) {
+                    return is_numeric($tid);
+                });
+                $targets = array_map('intval', $targets);
+            }
+            $folderTargetModel = new FolderTargetModel();
+            $folderTargetModel->edit($targets, $folderid, $roominfo['crid']);
         }
         $introModel = new IntroModel();
         $introModel->set($ifolderid, $introParams);
@@ -1819,4 +1855,20 @@ class CourseController extends Controller{
         
     }
 
+    /**
+     * 获取课程服务对象(范围)列表
+     * @return array
+     */
+    public function getCourseTargetsAction() {
+        $folderids = explode(',', $this->folderids);
+        $folderids = array_filter($folderids, function($folderid) {
+           return is_numeric($folderid) && $folderid > 0;
+        });
+        if (empty($folderids)) {
+            return array();
+        }
+        $folderids = array_unique($folderids);
+        $model = new FolderTargetModel();
+        return $model->getTargets($folderids, $this->crid);
+    }
 }

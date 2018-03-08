@@ -105,12 +105,17 @@ class AskAnswersModel{
 
     /****
      * 获取回答排名
+     * @param int $crid 网校ID
+     * @param int $grade 年级过滤参数，默认0不过滤
      * @return  array
      */
-    public function getAskanswer($crid){
+    public function getAskanswer($crid, $grade = 0){
         $sql
             = 'SELECT COUNT(ask.uid) as number ,ask.uid,q.crid,u.realname,u.sex,u.username,u.face FROM ebh_askanswers ask INNER JOIN ebh_users u ON ask.uid=u.uid';
         $sql .= ' INNER JOIN ebh_askquestions q ON q.qid=ask.qid';
+        if ($grade > 0) {
+            $sql .= ' JOIN ebh_classstudents cs on cs.uid=u.uid JOIN ebh_classes c on c.classid=cs.classid and c.crid=q.crid and c.grade='.$grade;
+        }
 
         $sql .= ' WHERE  q.crid='.$crid.' GROUP BY ask.uid  ORDER BY number DESC,ask.dateline DESC LIMIT 100';
         return Ebh()->db->query($sql)->list_array();

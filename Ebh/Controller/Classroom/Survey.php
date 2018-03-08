@@ -65,6 +65,12 @@ class SurveyController extends Controller{
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
                 'type'  =>  array('name'=>'type','default'=>5,'type'=>'int'),
             ),
+            'getSurveyStatusAction'   =>  array(
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int'),
+                'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int'),
+                'type'  =>  array('name'=>'type','require'=>true,'type'=>'int'),
+                'sid'  =>  array('name'=>'sid','require'=>true,'type'=>'int'),
+            ),
         );
     }
 	/**
@@ -178,5 +184,16 @@ class SurveyController extends Controller{
             $type = 5;
         }
         return $this->surveyModel->getLastSurvey($crid,$type);
+    }
+    /**
+     * 根据问卷sid获取用户将参与的问卷状态
+     */
+    public function getSurveyStatusAction(){
+        $param = array();
+        $param['crid'] = $this->crid;
+        $param['uid'] = $this->uid;
+        $param['sid'] = $this->sid;     //问卷id
+        $param['type'] = $this->type;   //type类型 0网校主页,1学生学习主页,2相关课件页,3选课问卷,4开通课程前的问卷,5登录前问卷,6开通服务后问卷
+        return $this->surveyModel->getSurveyStatus($param);
     }
 }

@@ -115,6 +115,19 @@ class DesignController extends Controller
                     'type' => 'int',
                     'require' => true
                 )
+            ),
+            //获取装扮预览图
+            'getDesignPreviewAction' => array(
+                'did' => array(
+                    'name' => 'did',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                )
             )
         );
     }
@@ -210,5 +223,14 @@ class DesignController extends Controller
     public function getDesignByDidAction() {
         $model = new DesignModel();
         return $model->getDesignByDid(array('did'=>$this->did));
+    }
+
+    /**
+     * 获取装扮预览图
+     * @return string
+     */
+    public function getDesignPreviewAction() {
+        $model = new DesignModel();
+        return $model->getPreview($this->did, $this->crid);
     }
 }

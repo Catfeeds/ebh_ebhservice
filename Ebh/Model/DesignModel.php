@@ -156,8 +156,10 @@ class DesignModel{
      * @return array
      */
     public function getDesignList($crid, $roomtype) {
+        Ebh()->db->set_con(0);
         $sql = 'SELECT `did`,`roomtype`,`status`,`client_type`,`created_at`,`updated_at`,`name`,`checked`,`remark`,`preview` FROM `ebh_roomdesigns` WHERE `crid`='.$crid.' AND `status`=0 AND `roomtype`='.$this->db->escape($roomtype).' ORDER BY `did` ASC';
         $ret = Ebh()->db->query($sql)->list_array();
+        Ebh()->db->reset_con();
         if (empty($ret)) {
             return array();
         }
@@ -278,5 +280,33 @@ class DesignModel{
             return array();
         }
         return $ret;
+    }
+
+    /**
+     * 获取装扮预览图
+     * @param int $did 装扮ID
+     * @param int $crid 网校ID
+     * @return string
+     */
+    public function getPreview($did, $crid) {
+        Ebh()->db->set_con(0);
+        $sql = 'SELECT `preview` FROM `ebh_roomdesigns` WHERE `did`='.$did.' AND `crid`='.$crid;
+        $design = Ebh()->db->query($sql)->row_array();
+        Ebh()->db->reset_con();
+        if (empty($design)) {
+            return '';
+        }
+        return $design['preview'];
+    }
+
+    /**
+     * 设置装扮预览图
+     * @param int $did 装扮ID
+     * @param string $preview 装扮图
+     * @param int $crid 网校ID
+     * @return mixed
+     */
+    public function setPreview($did, $preview, $crid) {
+        return Ebh()->db->update('ebh_roomdesigns', array('preview' => $preview), array('did' => $did, 'crid' => $crid));
     }
 }

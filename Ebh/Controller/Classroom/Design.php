@@ -17,8 +17,7 @@ class DesignController extends Controller{
                 'roomtype'  =>  array('name'=>'roomtype','require'=>true,'type'=>'string'),
                 'settings' => array('name'=>'settings','default'=>''),
                 'status'  =>  array('name'=>'status','type'=>'int','default'=>0),
-                'clientType' => array('name' => 'clientType', 'type' => 'int', 'default' => 0),
-                'preview' => array('name' => 'preview', 'type' => 'string')
+                'clientType' => array('name' => 'clientType', 'type' => 'int', 'default' => 0)
             ),
             'getdesignAction' =>array(
                 'crid' => array('name'=>'crid','require'=>true,'type'=>'int','min'=>0),
@@ -63,6 +62,22 @@ class DesignController extends Controller{
                 'clientType' => array('name' => 'clientType', 'type' => 'int', 'default' => 0),
                 'num' => array('name' => 'num', 'type' => 'int', 'default' => 0),
                 'istop' => array('name' => 'istop', 'type' => 'int', 'default' => 0, 'min' => 0, 'max' => 1)
+            ),
+            'savePreviewAction' => array(
+                'crid' => array(
+                    'name' => 'crid',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'did' => array(
+                    'name' => 'did',
+                    'type' => 'int',
+                    'require' => true
+                ),
+                'preview' => array(
+                    'name' => 'preview',
+                    'type' => 'string'
+                )
             )
         );
     }
@@ -87,8 +102,7 @@ class DesignController extends Controller{
             'body'=>$this->body,
             'settings'=>$this->settings,
             'status'=>$this->status,
-            'client_type' => $this->clientType,
-            'preview' => $this->preview
+            'client_type' => $this->clientType
         );
 
         if(empty($design)){
@@ -328,5 +342,14 @@ class DesignController extends Controller{
     public function getdesigntemplatesAction() {
         $model = new DesignModel();
         return $model->getDesignTemplateList($this->clientType, $this->istop, $this->num);
+    }
+
+    /**
+     * 设置装扮预览图
+     * @return mixed
+     */
+    public function savePreviewAction() {
+        $model = new DesignModel();
+        return $model->setPreview($this->did, $this->preview, $this->crid);
     }
 }

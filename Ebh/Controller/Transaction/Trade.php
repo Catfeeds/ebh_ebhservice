@@ -359,7 +359,18 @@ class TradeController extends Controller{
         if($this->onlyorder == 1){
             return $orderparam;
         }
-        return $this->payment($orderparam,$this->parameters);
+        $result = $this->payment($orderparam,$this->parameters);
+        //判断是否存在开通服务后问卷，验证问卷有效性,并设置订单缓存用于支付成功后获取
+        if($result['status'] == 1){
+            $surveyparam = array();
+            $surveyparam['crid'] = $this->crid;
+            $surveyparam['uid'] = $this->uid;
+            $surveyparam['count'] = $flodernum;
+            $surveyparam['orderid'] = $orderparam['orderid'];
+            $surveyparam['folderid'] = $orderparam['itemlist'][0]['folderid'];
+            $this->checkSurveySid($surveyparam);
+        }
+        return $result;
     }
 
     /**
@@ -782,5 +793,49 @@ class TradeController extends Controller{
         $sharekey = str_replace(' ', '+', $sharekey);
         $sharekey = explode('%',authcode($sharekey, 'DECODE'));
         return $sharekey;
+    }
+
+    /**
+     *判断是否存在开通服务后问卷，验证问卷有效性，并设置订单缓存用于支付成功后获取
+     * @return surveysid调查问卷id
+     */
+    private function checkSurveySid($param){
+        $itemcount = intval($param['count']);
+        $folderid = intval($param['folderid']);
+        $orderid = intval($param['orderid']);
+        $crid = intval($param['crid']);
+        $uid = intval($param['uid']);
+        $result = false;
+        //重置当前用户ebhservice中设置的开通服务后问卷缓存
+        $redis = Ebh()->cache->getRedis();
+        $redis_key = 'payordersurvey_' . $crid . '_' . $uid;
+        $redis->delete($redis_key);
+        //1判断当前课程folderid是否存在,并且不是服务包
+        if(empty($itemcount) || ($itemcount != 1) || empty($folderid) || empty($crid) || empty($uid) || empty($orderid)){
+            return false;
+        }
+        //2读取缓存中开通服务后问卷id
+        $redis_key = 'payitemsurvey_' . $crid . '_' . $folderid;
+        $surveyinfo = $redis->get($redis_key);//读取缓存中开通服务后调查问卷信息
+        if (!empty($surveyinfo)) {
+            $surveyinfo = json_decode($surveyinfo, true);
+            $surveysid = (!empty($surveyinfo['sid']) && ($surveyinfo['sid'] > 0)) ? intval($surveyinfo['sid']) : 0;//问卷id
+            $surveycrid = !empty($surveyinfo['crid']) ? $surveyinfo['crid'] : 0;
+            $surveyfolderid = !empty($surveyinfo['folderid']) ? $surveyinfo['folderid'] : 0;    //问卷对应的课程id
+        //3获取问卷状态,调查问卷为已发布,未超时,未删除且用户未回答过则返回true,否则false
+            if (!empty($surveysid) && ($surveycrid == $crid) && ($surveyfolderid == $folderid)) {
+                $surveyparam = array('sid' => $surveysid, 'uid' => $uid, 'crid' => $surveycrid, 'type' => 6);
+                $surveyModel = new SurveyModel();
+                $check = $surveyModel->getSurveyStatus($surveyparam);;
+                if ($check) {
+        //4添加问卷sid和订单orderid到临时缓存中，在支付成功后的可获取,有效期5分钟
+                    $redis_key = 'payordersurvey_' . $crid . '_' . $uid;
+                    $ordersurvey = json_encode(array('surveysid'=>$surveysid,'orderid'=>$orderid,'folderid'=>$folderid));
+                    $redis->set($redis_key, $ordersurvey, 300);
+                    $result = $surveysid;
+                }
+            }
+        }
+        return $result;
     }
 }

@@ -223,4 +223,24 @@ class AttendancesModel{
         return Ebh()->db->query($sql3)->list_array();
         //WHERE up.crid=10194 AND c.crid=10194 AND up.folderid=29774 AND c.classid in (9) ) as count from ebh_classes  where classid=9
     }
+	
+	/*
+	所有课件所有班级的出勤统计
+	*/
+	public function getAttendanceAll($param){
+		if(empty($param['folderids']) || empty($param['cwids']) || empty($param['crid']) || empty($param['classids'])){
+			return array('permissioncount'=>array(),'attendcount'=>array());
+		}
+		//班级-课程 有权限的人数
+		$sql1 = 'select count(distinct u.uid) as count, folderid,cs.classid from ebh_userpermisions up 
+                join ebh_users u on u.uid=up.uid
+                left join ebh_classstudents cs on cs.uid=u.uid WHERE up.crid='.$param['crid'].' AND up.folderid in('.implode(',',$param['folderids']).') AND cs.classid in ('.implode(',',$param['classids']).') group by cs.classid,folderid';
+		//班级-课件 出勤的人数
+		$sql2 = 'select count(distinct cs.uid) as count, cwid,cs.classid from ebh_attendances att 
+                join ebh_classstudents cs on cs.uid=att.uid WHERE att.crid='.$param['crid'].' AND att.cwid in('.implode(',',$param['cwids']).') AND cs.classid in ('.implode(',',$param['classids']).') group by cs.classid,cwid';
+				
+		$class_foldercount = Ebh()->db->query($sql1)->list_array();
+		$class_cwcount = Ebh()->db->query($sql2)->list_array();
+		return array('permissioncount'=>$class_foldercount,'attendcount'=>$class_cwcount);
+	}
 }

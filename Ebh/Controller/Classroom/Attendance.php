@@ -23,6 +23,7 @@ class AttendanceController extends Controller{
                 'begindate'  =>  array('name'=>'begindate','type'=>'int','default'=>0),
                 'enddate'  =>  array('name'=>'enddate','type'=>'int','default'=>0),
                 'name'  =>  array('name'=>'name','default'=>''),
+				'todayfirst'=>array('name'=>'todayfirst','default'=>false,'type'=>'boolean')
             ),
             'checkAction'   =>  array(
                 'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
@@ -40,6 +41,14 @@ class AttendanceController extends Controller{
                 'cwid'  =>  array('name'=>'cwid','require'=>true,'type'=>'int','min'=>1),
                 'uid'  =>  array('name'=>'uid','require'=>true,'type'=>'int','min'=>1),
                 'classid'  =>  array('name'=>'classid','type'=>'int','default'=>0),
+            ),
+			'courseAllAction'   =>  array(
+                'crid'  =>  array('name'=>'crid','require'=>true,'type'=>'int','min'=>1),
+                'folderid'  =>  array('name'=>'folderid','type'=>'int','default'=>0),
+                'begindate'  =>  array('name'=>'begindate','type'=>'int','default'=>0),
+                'enddate'  =>  array('name'=>'enddate','type'=>'int','default'=>0),
+                'name'  =>  array('name'=>'name','default'=>''),
+				'exportall'=> array('name'=>'exportall','type'=>'int','default'=>0),
             ),
 
         );
@@ -81,7 +90,13 @@ class AttendanceController extends Controller{
         if($this->enddate){
             $params['truedatelineto'] = $this->enddate;
         }
-
+		
+		//今天的排在前面
+		if(!empty($this->todayfirst)){
+			$today = Date('Ymd',SYSTIME);
+            $params['order'] = "from_unixtime(c.truedateline,'%Y%m%d')=$today desc,c.truedateline desc";
+        }
+		
         //名字搜索
         if(!empty($this->name)){
             $params['name'] = $this->name;
@@ -254,5 +269,55 @@ class AttendanceController extends Controller{
 
     }
 
+	
+	/**
+     * 考勤出勤课件列表 及统计
+     */
+    public function courseAllAction(){
+        $courseModel = new CoursewareModel();
+        $params['status'] = 1;
+        $params['crid'] = $this->crid;
+        $params['order'] = ' c.submitat DESC,c.cwid desc';
+        $params['live'] = 1;
 
+        if($this->folderid > 0){
+            $params['folderids'] = $this->folderid;
+        }
+
+        if($this->begindate){
+            $params['truedatelinefrom'] = $this->begindate;
+        }
+        if($this->enddate){
+            $params['truedatelineto'] = $this->enddate;
+        }
+
+        //名字搜索
+        if(!empty($this->name)){
+            $params['name'] = $this->name;
+        }
+		
+		$params['limit'] = 10000;
+		
+		//课件列表
+        $cwlist = $courseModel->getNewCourseList($params);
+		//班级列表
+		$classmodel = new ClassesModel();
+		$classlist = $classmodel->getList(array('crid'=>$this->crid,'roomType'=>'edu','order'=>'classname asc'));
+		
+		$paramAtt['classids'] = array_column($classlist,'classid');
+		$paramAtt['folderids'] = array_unique(array_column($cwlist,'folderid'));
+		$paramAtt['cwids'] = array_column($cwlist,'cwid');
+		$paramAtt['crid'] = $this->crid;
+		
+		$attendanceModel = new AttendancesModel();
+		//统计结果
+		$attendancelist = $attendanceModel->getAttendanceAll($paramAtt);
+		$attendancelist['classes'] = $classlist;
+		$attendancelist['cwlist'] = $cwlist;
+		return $attendancelist;
+        // return array(
+            // 'total' =>  $total,
+            // 'list'  =>  $courseList,
+        // );
+    }
 }

@@ -233,16 +233,25 @@ class AttendanceController extends Controller{
         if(empty($classes)){
             return $result;
         }
-
-        $result['classes'] = $classes;
-        $classIds = array_column($classes,'classid');
-
-
-        //获取学生数据开始
+		//获取学生数据开始
         $courseModel = new CoursewareModel();
 
         $course = $courseModel->getCourseByCwid($this->cwid);
 
+		//如果班级选课了，则把其他的班级去掉
+		if(!empty($course['classids'])){
+			$cwclassids = explode(',',$course['classids']);
+			foreach($classes as $k=>$class){
+				if(!in_array($class['classid'],$cwclassids)){
+					unset($classes[$k]);
+				}
+			}
+		}
+        $result['classes'] = $classes;
+        $classIds = array_column($classes,'classid');
+
+
+        
         if(!$course){
             return $result;
         }

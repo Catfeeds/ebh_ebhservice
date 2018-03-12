@@ -95,7 +95,7 @@ class CoursewareModel
      * 获取平台最新发布的课件
      */
     public function getNewCourseList($queryarr) {
-        $sql = 'SELECT c.cwid,c.title,c.summary,c.viewnum,c.reviewnum,c.dateline,c.logo,u.username,u.realname,c.cwurl,f.foldername,f.folderid,f.coursewarelogo,u.face,u.sex,c.submitat,c.endat,c.ism3u8,c.cwlength,c.truedateline,c.islive,c.uid,c.assistantid FROM ebh_coursewares c ' .
+        $sql = 'SELECT c.cwid,c.title,c.summary,c.viewnum,c.reviewnum,c.dateline,c.logo,u.username,u.realname,c.cwurl,f.foldername,f.folderid,f.coursewarelogo,u.face,u.sex,c.submitat,c.endat,c.ism3u8,c.cwlength,c.truedateline,c.islive,c.uid,c.assistantid,rc.classids FROM ebh_coursewares c ' .
             'JOIN ebh_roomcourses rc on (c.cwid = rc.cwid) '.
             'JOIN ebh_users u on (u.uid = c.uid) '.
             'JOIN ebh_folders f on f.folderid=rc.folderid';
@@ -318,7 +318,7 @@ class CoursewareModel
 	*获取课件详情
 	*/
 	public function getCourseByCwid($cwid){
-		$sql = 'select rc.delaytime,c.cwid,c.uid,c.catid,c.title,c.tag,c.logo,c.images,c.summary,c.message,c.cwname,c.cwsource,c.cwurl,cwsize,c.dateline,rc.crid,rc.folderid,rc.sid,rc.isfree,rc.cdisplayorder,c.status,f.foldername,c.islive,c.ism3u8,c.m3u8url,c.thumb,c.cwlength,c.cwsize,c.submitat,c.endat,c.ispreview,c.live_type '.
+		$sql = 'select rc.delaytime,c.cwid,c.uid,c.catid,c.title,c.tag,c.logo,c.images,c.summary,c.message,c.cwname,c.cwsource,c.cwurl,cwsize,c.dateline,rc.crid,rc.folderid,rc.sid,rc.isfree,rc.cdisplayorder,c.status,f.foldername,c.islive,c.ism3u8,c.m3u8url,c.thumb,c.cwlength,c.cwsize,c.submitat,c.endat,c.ispreview,c.live_type,rc.classids '.
                 'from ebh_coursewares c ' .
                 'join ebh_roomcourses rc on (c.cwid = rc.cwid) ' .
 				'join ebh_folders f on rc.folderid=f.folderid '.

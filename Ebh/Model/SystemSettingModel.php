@@ -118,6 +118,9 @@ class SystemSettingModel
         if (isset($update_params['showquestionbygrade'])) {
             $params['showquestionbygrade'] = intval($update_params['showquestionbygrade']);
         }
+		if (isset($update_params['newcwpagesize'])) {
+            $params['newcwpagesize'] = intval($update_params['newcwpagesize']);
+        }
         if (empty($update_params)) {
             return 0;
         }
@@ -204,6 +207,9 @@ class SystemSettingModel
         if (isset($update_params['showquestionbygrade'])) {
             $params['showquestionbygrade'] = intval($update_params['showquestionbygrade']);
         }
+		if (isset($update_params['newcwpagesize'])) {
+            $params['newcwpagesize'] = intval($update_params['newcwpagesize']);
+        }
         $params['crid'] = intval($crid);
         return $this->db->insert('ebh_systemsettings', $params);
     }
@@ -215,7 +221,7 @@ class SystemSettingModel
      */
     public function getOtherSetting($crid) {
         $crid = (int) $crid;
-        $sql = "SELECT `isbanbuy`,`isbanregister`,`isbanthirdlogin`,`isdepartment`,`refuse_stranger`,`mobile_register`,`review_interval`,`post_interval`,`limitnum`,`creditrule`,`showlink`,`showmodule`,`ebhbrowser` ,`cwlistonlyself`,`showquestionbygrade`
+        $sql = "SELECT `isbanbuy`,`isbanregister`,`isbanthirdlogin`,`isdepartment`,`refuse_stranger`,`mobile_register`,`review_interval`,`post_interval`,`limitnum`,`creditrule`,`showlink`,`showmodule`,`ebhbrowser` ,`cwlistonlyself`,`showquestionbygrade`,`newcwpagesize`
                 FROM `ebh_systemsettings` 
                 WHERE `crid`=$crid LIMIT 1";
         return $this->db->query($sql)->row_array();

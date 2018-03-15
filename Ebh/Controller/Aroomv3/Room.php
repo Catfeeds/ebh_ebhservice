@@ -293,6 +293,10 @@ class RoomController extends Controller
                 'showquestionbygrade' => array(
                     'name' => 'showquestionbygrade',
                     'type' => 'int'
+                ),
+				'newcwpagesize' => array(
+                    'name' => 'newcwpagesize',
+                    'type' => 'int'
                 )
             ),
             //登录限制
@@ -1078,6 +1082,9 @@ class RoomController extends Controller
         }
         if ($this->showquestionbygrade !== NULL) {
             $params['showquestionbygrade'] = min(1, max(0, $this->showquestionbygrade));
+        }
+		if ($this->newcwpagesize !== NULL) {
+            $params['newcwpagesize'] = min(20,max(5,$this->newcwpagesize));
         }
         if ($model->exists($this->crid)) {
             return $model->update($this->crid, $params);

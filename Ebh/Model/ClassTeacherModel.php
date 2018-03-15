@@ -41,7 +41,7 @@ class ClassTeacherModel{
     public function getDeptsForTeacherWithPath($crid, $paths = array()) {
         $sql = array();
         foreach ($paths as $path) {
-            $sql[] = 'SELECT `classid`,`classname`,`code`,`superior`,`category`,`path`,`stunum`,`lft`,`rgt`,`displayorder` FROM `ebh_classes` WHERE `crid`='.$crid.' AND `status`=0 AND `lft`>='.$path['lft'].' AND `rgt`<='.$path['rgt'];
+            $sql[] = 'SELECT `classid`,`classname`,`code`,`superior`,`category`,`stunum`,`lft`,`rgt`,`displayorder` FROM `ebh_classes` WHERE `crid`='.$crid.' AND `status`=0 AND `lft` BETWEEN '.$path['lft'].' AND '.$path['rgt'];
         }
         $sql = implode(' UNION ', $sql);
         return Ebh()->db->query($sql)->list_array('classid');

@@ -335,4 +335,46 @@ class UserpermisionsModel{
         $sql .= ' WHERE '.implode(' AND ',$wherearr);
         return Ebh()->db->query($sql)->list_array();
     }
+
+    /**
+     * 获取学生服务列表
+     * @param array $studentids 学生ID集
+     * @param int $crid 网校ID
+     * @param int $folderid 课程ID
+     * @return array
+     */
+    public function getServiceListForStudents($studentids, $crid, $folderid = 0) {
+        $wheres = array(
+            '`uid` IN('.implode(',', $studentids).')',
+            '`crid`='.$crid
+        );
+        if ($folderid > 0) {
+            $wheres[] = '`folderid`='.$folderid;
+        }
+        $ret = Ebh()->db->query('SELECT DISTINCT `folderid`,`cwid` FROM `ebh_userpermisions` WHERE '.implode(' AND ', $wheres))->list_array();
+        if (!empty($ret)) {
+            return $ret;
+        }
+        return array();
+    }
+
+    /**
+     * 获取学生服务列表
+     * @param array $folderids 课程ID集
+     * @param array $studentids 学生ID集
+     * @param int $crid 网校ID
+     * @return array
+     */
+    public function getServiceStudentsCount($folderids, $studentids, $crid) {
+        $wheres = array(
+            '`folderid` IN('.implode(',', $folderids).')',
+            '`uid` IN('.implode(',', $studentids).')',
+            '`crid`='.$crid
+        );
+        $ret = Ebh()->db->query('SELECT `folderid`,COUNT(DISTINCT `uid`) AS `c` FROM `ebh_userpermisions` WHERE '.implode(' AND ', $wheres).' GROUP BY `folderid`')->list_array('folderid');
+        if (!empty($ret)) {
+            return $ret;
+        }
+        return array();
+    }
 }

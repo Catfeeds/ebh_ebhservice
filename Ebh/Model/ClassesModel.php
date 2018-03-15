@@ -1425,4 +1425,87 @@ class ClassesModel{
         $sql .= ' ORDER BY `classid` DESC';
         return Ebh()->db->query($sql)->list_array();
     }
+    /**
+     * 获取教师担任班主任的班级列表
+     * @param int $uid 教师ID,0是为管理员
+     * @param int $crid 网校ID
+     * @param array $params 过滤条件
+     * @param bool $setKey 是否以班级ID做为返回数组的键
+     * @param null $limit 限量条件
+     * @return mixed
+     */
+    public function getClassesForHomeroom($uid, $crid, $params = array(), $setKey = false, $limit = null) {
+        $wheres = array(
+            '`a`.`crid`='.$crid
+        );
+        if ($uid > 0) {
+            $wheres[] = '`a`.`headteacherid`='.$uid;
+        }
+        $ors = array();
+        if (isset($params['classname'])) {
+            $ors[] = '`a`.`classname` LIKE '.Ebh()->db->escape('%'.$params['classname'].'%');
+        }
+        if (isset($params['username'])) {
+            $ors[] = '`b`.`username` LIKE '.Ebh()->db->escape('%'.$params['username'].'%');
+        }
+        if (isset($params['realname'])) {
+            $ors[] = '`b`.`realname` LIKE '.Ebh()->db->escape('%'.$params['realname'].'%');
+        }
+        if (!empty($ors)) {
+            $wheres[] = '('.implode(' OR ', $ors).')';
+        }
+        unset($ors);
+        $sql = 'SELECT `a`.`classid`,`a`.`classname`,IFNULL(`b`.`uid`,0) AS `uid`,`b`.`username`,`b`.`realname`,`b`.`face`,`b`.`sex`,`b`.`groupid` FROM `ebh_classes` `a` LEFT JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`headteacherid` WHERE '.implode(' AND ', $wheres).' ORDER BY `displayorder` DESC,`classid` DESC';
+        if (!empty($limit)) {
+            if (is_array($limit)) {
+                $page = max(1, isset($limit['page']) ? intval($limit['page']) : 1);
+                $top = max(0, isset($limit['pagesize']) ? intval($limit['pagesize']) : 1);
+                $offset = ($page - 1) * $top;
+            } else if (is_numeric($limit)) {
+                $top = max(1, intval($limit));
+                $offset = 0;
+            } else {
+                $top = 0;
+            }
+            if ($top > 0) {
+                $sql .= ' LIMIT '.$offset.','.$top;
+            }
+        }
+        return Ebh()->db->query($sql)->list_array($setKey ? 'classid' : '');
+    }
+    /**
+     * 获取教师担任班主任的班级数量
+     * @param int $uid 教师ID,0是为管理员
+     * @param int $crid 网校ID
+     * @param array $params 过滤条件
+     * @return mixed
+     */
+    public function getClassCountForHomeroom($uid, $crid, $params = array()) {
+        $wheres = array(
+            '`a`.`crid`='.$crid
+        );
+        if ($uid > 0) {
+            $wheres[] = '`a`.`headteacherid`='.$uid;
+        }
+        $ors = array();
+        if (isset($params['classname'])) {
+            $ors[] = '`a`.`classname` LIKE '.Ebh()->db->escape('%'.$params['classname'].'%');
+        }
+        if (isset($params['username'])) {
+            $ors[] = '`b`.`username` LIKE '.Ebh()->db->escape('%'.$params['username'].'%');
+        }
+        if (isset($params['realname'])) {
+            $ors[] = '`b`.`realname` LIKE '.Ebh()->db->escape('%'.$params['realname'].'%');
+        }
+        if (!empty($ors)) {
+            $wheres[] = '('.implode(' OR ', $ors).')';
+        }
+        unset($ors);
+        $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_classes` `a` LEFT JOIN `ebh_users` `b` ON `b`.`uid`=`a`.`headteacherid` WHERE '.implode(' AND ', $wheres);
+        $ret = Ebh()->db->query($sql)->row_array();
+        if (!empty($ret)) {
+            return intval($ret['c']);
+        }
+        return 0;
+    }
 }

@@ -103,4 +103,17 @@ class ClassstudentsModel{
         }
         return $ret;
     }
+
+    /**
+     * 获取班级的学生ID集
+     * @param int $classid 班级ID
+     * @return array
+     */
+    public function getStudentidList($classid) {
+        $ret = Ebh()->db->query('SELECT `uid` FROM `ebh_classstudents` WHERE `classid`='.$classid)->list_field('uid', 'uid');
+        if (empty($ret)) {
+            return array();
+        }
+        return $ret;
+    }
 }

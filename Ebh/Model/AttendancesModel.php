@@ -243,4 +243,25 @@ class AttendancesModel{
 		$class_cwcount = Ebh()->db->query($sql2)->list_array();
 		return array('permissioncount'=>$class_foldercount,'attendcount'=>$class_cwcount);
 	}
+
+    /**
+     * 课件的出勤统计
+     * @param array $cwids 课件ID集
+     * @param array $studentids 学生ID集
+     * @param int $crid 网校ID
+     * @return array
+     */
+	public function getCoursewareAttendanceList($cwids, $studentids, $crid) {
+	    $wheres = array(
+	        '`cwid` IN('.implode(',', $cwids).')',
+	        '`uid` IN('.implode(',', $studentids).')',
+	        '`crid`='.$crid
+        );
+	    $sql = 'SELECT `cwid`,COUNT(DISTINCT `uid`) AS `c` FROM `ebh_attendances` WHERE '.implode(' AND ', $wheres).' GROUP BY `cwid`';
+	    $ret = Ebh()->db->query($sql)->list_field('c', 'cwid');
+	    if (empty($ret)) {
+	        return array();
+        }
+        return $ret;
+    }
 }

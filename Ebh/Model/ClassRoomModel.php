@@ -481,4 +481,17 @@ class ClassRoomModel
         $sql = 'select isshare,sharepercent from ebh_systemsettings where crid='.$crid;
         return $this->db->query($sql)->row_array();
     }
+
+    /**
+     * 获取网校名
+     * @param int $crid 网校ID
+     * @return bool
+     */
+    public function getCrname($crid) {
+        $roominfo = Ebh()->db->query('SELECT `crname` FROM `ebh_classrooms` WHERE `crid`='.$crid)->row_array();
+        if (empty($roominfo)) {
+            return false;
+        }
+        return $roominfo['crname'];
+    }
 }

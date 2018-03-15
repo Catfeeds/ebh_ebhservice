@@ -3220,4 +3220,23 @@ GROUP BY uid';
         return Ebh()->db->query($sql)->list_array();
     }
 
+    /**
+     * 获取课程菜单
+     * @param array $folderids 课程ID
+     * @return array
+     */
+    public function getFolderMenu($folderids, $crid) {
+        $wheres = array(
+            '`folderid` IN('.implode(',', $folderids).')',
+            '`crid`='.$crid,
+            '`del`=0',
+            '`folderlevel`>1'
+        );
+        $sql = 'SELECT `folderid`,`foldername` FROM `ebh_folders` WHERE '.implode(' AND ', $wheres).' ORDER BY `folderid` DESC';
+        $ret = Ebh()->db->query($sql)->list_field('foldername', 'folderid');
+        if (empty($ret)) {
+            return array();
+        }
+        return $ret;
+    }
 }

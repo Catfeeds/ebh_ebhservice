@@ -80,4 +80,93 @@ class RoomCourseModel{
       $ret =  Ebh()->db->query($sql)->row_array('folderid');
       return isset($ret['folderid'])&& $ret['folderid']>0?$ret['folderid']:0;
     }
+
+    /**
+     * 获取直播课件
+     * @param array $params 筛选条件
+     * @param int $crid 网校ID
+     * @param null $limit 限量条件
+     * @return array
+     */
+    public function getCoursewareList($params, $crid, $limit = null) {
+        $wheres = array(
+            '`a`.`crid`='.$crid,
+            '`b`.`status`=1',
+            '`b`.`islive`=1'
+        );
+        if (!empty($params['classid'])) {
+            $wheres[] = '(`a`.`classids`=\'\' OR `a`.`classids`=\'0\' OR FIND_IN_SET('.$params['classid'].',`a`.`classids`))';
+        }
+        if (isset($params['s']) && $params['s'] != '') {
+            $wheres[] = '`b`.`title` LIKE '.Ebh()->db->escape('%'.$params['s'].'%');
+        }
+        if (isset($params['start'])) {
+            $wheres[] = 'IF(`b`.`truedateline`=0,`b`.`submitat`,`b`.`truedateline`)>='.$params['start'];
+        }
+        if (isset($params['end'])) {
+            $wheres[] = 'IF(`b`.`truedateline`=0,`b`.`submitat`,`b`.`truedateline`)<='.$params['end'];
+        }
+        if (!empty($params['folderids']) && !empty($params['cwids'])) {
+            $wheres[] = '(`a`.`folderid` IN('.implode(',', $params['folderids']).') OR `a`.`cwid` IN('.implode(',', $params['cwids']).'))';
+        } else if (!empty($params['folderids'])) {
+            $wheres[] = '`a`.`folderid` IN('.implode(',', $params['folderids']).')';
+        } else if (!empty($params['cwids'])) {
+            $wheres[] = '`a`.`cwid` IN('.implode(',', $params['cwids']).')';
+        }
+        $sql = 'SELECT `a`.`folderid`,`b`.`title`,`b`.`cwid`,IF(`b`.`truedateline`=0,`b`.`submitat`,`b`.`truedateline`) AS `truedateline`,IF(TO_DAYS(FROM_UNIXTIME(IF(`b`.`truedateline`=0,`b`.`submitat`,`b`.`truedateline`)))=TO_DAYS(NOW()),1,0) AS `t` FROM `ebh_roomcourses` `a` JOIN `ebh_coursewares` `b` ON `b`.`cwid`=`a`.`cwid` WHERE '.implode(' AND ', $wheres).' ORDER BY `t` DESC,`truedateline` DESC,`b`.`cwid` DESC';
+        if (!empty($limit)) {
+            $top = $offset = 0;
+            if (is_array($limit)) {
+                $top = max(1, isset($limit['pagesize']) ? intval($limit['pagesize']) : 1);
+                $offset = (max(1,isset($limit['page']) ? intval($limit['page']) : 1) - 1) * $top;
+            } else if (is_numeric($limit)) {
+                $top = max(1, intval($limit));
+            }
+            $sql .= ' LIMIT '.$offset.','.$top;
+        }
+        $ret = Ebh()->db->query($sql)->list_array('cwid');
+        if (!empty($ret)) {
+            return $ret;
+        }
+        return array();
+    }
+
+    /**
+     * 获取直播课件数量
+     * @param array $params 筛选条件
+     * @param $crid 网校ID
+     * @return int
+     */
+    public function getCoursewareCount($params, $crid) {
+        $wheres = array(
+            '`a`.`crid`='.$crid,
+            '`b`.`status`=1',
+            '`b`.`islive`=1'
+        );
+        if (!empty($params['classid'])) {
+            $wheres[] = '(`a`.`classids`=\'\' OR `a`.`classids`=\'0\' OR FIND_IN_SET('.$params['classid'].',`a`.`classids`))';
+        }
+        if (isset($params['s']) && $params['s'] != '') {
+            $wheres[] = '`b`.`title` LIKE '.Ebh()->db->escape('%'.$params['s'].'%');
+        }
+        if (isset($params['start'])) {
+            $wheres[] = 'IF(`b`.`truedateline`=0,`b`.`submitat`,`b`.`truedateline`)>='.$params['start'];
+        }
+        if (isset($params['end'])) {
+            $wheres[] = 'IF(`b`.`truedateline`=0,`b`.`submitat`,`b`.`truedateline`)<='.$params['end'];
+        }
+        if (!empty($params['folderids']) && !empty($params['cwids'])) {
+            $wheres[] = '(`a`.`folderid` IN('.implode(',', $params['folderids']).') OR `a`.`cwid` IN('.implode(',', $params['cwids']).'))';
+        } else if (!empty($params['folderids'])) {
+            $wheres[] = '`a`.`folderid` IN('.implode(',', $params['folderids']).')';
+        } else if (!empty($params['cwids'])) {
+            $wheres[] = '`a`.`cwid` IN('.implode(',', $params['cwids']).')';
+        }
+        $sql = 'SELECT COUNT(1) AS `c` FROM `ebh_roomcourses` `a` JOIN `ebh_coursewares` `b` ON `b`.`cwid`=`a`.`cwid` WHERE '.implode(' AND ', $wheres);
+        $ret = Ebh()->db->query($sql)->row_array();
+        if (!empty($ret['c'])) {
+            return intval($ret['c']);
+        }
+        return 0;
+    }
 }
